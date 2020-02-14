@@ -4,12 +4,6 @@
 qgutils provides a couple of functions useful in the QG world and
 elsewhere.
 
-Typical usage
-
-    #!/usr/bin/env python
-
-    import qgutils as qg
-
 * Installation
 
 #+begin_src bash
@@ -17,9 +11,9 @@ python setup.py install --user
 #+end_src
 
 * Exemple 1 compute a deformation radius
-Suppose we have 2 layers of thickness 500 and 2500 m
-The Brunt-Vaisala frequency (squared) N^2 = 10^-5 s^-2
-and the coriolis parameter f0 = 10^-4 s^-1
+- Suppose we have 2 layers of thickness 500 and 2500 m
+- The Brunt-Vaisala frequency (squared) N^2 = 10^-5 s^-2
+- the coriolis parameter is f0 = 10^-4 s^-1
 
 #+begin_src python :results output
 import qgutils as qg
