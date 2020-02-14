@@ -1,0 +1,4 @@
+build/
+dist/
+qgutils.egg-info/
+qgutils/__pycache__/
