@@ -102,25 +102,33 @@ def gamma_stretch(dh,N2,**kwargs) :
   else:
     return S
 
-def comp_modes(dh,N2,**kwargs):
+def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False):
+  '''compute eigenvalues (and eigenvectors) of the sturm-liouville
+  equation 
 
-  # compute matrices for the mode/layer conversion
-  # mod2lay[:,0] is the barotropic mode: should be 1..1
-  # mod2lay[:,i] is the ith baroclinic mode
+       d  ( f^2  d     )     1
+       -- ( ---  -- psi)  + ---- psi = 0
+       dz ( N^2  dz    )    Rd^2
 
-  # to convert from physical to modal
-  #  u_mod = np.dot(lay2mod[:,:],u_lev)
-  # np.einsum('ijkl,jkl->ikl',lay2mod,u_lev)
+  for a given stratification
 
-  # to go back to the physical space
-  # u_lev = np.dot(mod2lay[:,:],u_mod)
+  The eigenvectors correspond to the matrices for the mode/layer
+  conversion
 
-  # the w_modes are related to the p_modes by
-  # w_modes = -1/N2 d p_modes/dz
+  mod2lay[:,0] is the barotropic mode: should be 1..1
+  mod2lay[:,i] is the ith baroclinic mode
 
-  f0     = kwargs.get('f0'    , 1.0)
-  eivec = kwargs.get('eivec', False)
-  wmode = kwargs.get('wmode', False)
+  to convert from physical to modal
+  u_mod = np.dot(lay2mod[:,:],u_lev)
+  np.einsum('ijkl,jkl->ikl',lay2mod,u_lev)
+
+  to go back to the physical space
+  u_lev = np.dot(mod2lay[:,:],u_mod)
+
+  the w_modes are related to the p_modes by
+  w_modes = -1/N2 d p_modes/dz
+
+  '''
 
   N2,f0 = reshape3d(dh,N2,f0)
   nl,si_y,si_x = N2.shape
@@ -266,14 +274,19 @@ def p2b(psi,dh,f0):
   """
   dhi = 0.5*(dh[1:] + dh[:-1])
 
-  b = -f0*np.diff(psi,1,0)/dhi[:,None,None]
+  nd = psi.ndim
 
-  return psi.squeeze()
+  if nd == 1:
+    b = -f0*np.diff(psi,1,0)/dhi[:]
+  elif nd == 2: 
+    b = -f0*np.diff(psi,1,0)/dhi[:,None]
+  elif nd == 3: 
+    b = -f0*np.diff(psi,1,0)/dhi[:,None,None]
+
+  return b.squeeze()
 
 
-def laplacian(psi,Delta,**kwargs):
-
-  bc = kwargs.get('bc',"dirichlet")
+def laplacian(psi, Delta=1, bc='dirichlet'):
 
   nd = psi.ndim
   si = psi.shape
@@ -284,10 +297,7 @@ def laplacian(psi,Delta,**kwargs):
   elif nd == 2: 
     psi = psi.reshape(1,si[0],si[1])
 
-  if bc == "dirichlet":
-    psi = dirichlet_bc(psi)
-  else:
-    psi = neumann_bc(psi)
+  psi = pad_bc(psi, bc)
 
   omega = (psi[:,2:,1:-1] + psi[:,:-2,1:-1] + psi[:,1:-1,2:] + psi[:,1:-1,:-2] - 4*psi[:,1:-1,1:-1])/Delta**2
 
@@ -302,10 +312,7 @@ def p2q(psi,dh,N2,f0,Delta,**kwargs):
 
 ## routines from spoisson
 # general poisson
-def poisson2d(n, **kwargs):
-
-  Delta = kwargs.get('Delta',1.)
-  bc = kwargs.get('bc',"dirichlet")
+def poisson2d(n, Delta=1, bc='dirichlet'):
 
   iDelta2 = 1/Delta**2
 

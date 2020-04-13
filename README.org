@@ -10,14 +10,14 @@ elsewhere.
 python setup.py install --user
 #+end_src
 
-* Exemple 1 compute a deformation radius
+* Exemple 1: Compute a deformation radius
 - Suppose we have 2 layers of thickness 500 and 2500 m
 - The Brunt-Vaisala frequency (squared) N^2 = 10^-5 s^-2
 - the coriolis parameter is f0 = 10^-4 s^-1
 
 #+begin_src python :results output
-import qgutils as qg
 import numpy as np
+import qgutils as qg
 
 dh = np.array([500,2500]) # thickness of the layers 
 N2 = np.array([1e-5])
