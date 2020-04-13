@@ -45,12 +45,10 @@ def reshape3d(dh,N2,f0, **kwargs):
     return N2,f0
 
 
-def gamma_stretch(dh,N2,**kwargs) :
-
-  f0     = kwargs.get('f0'    , 1.0)
-#  sparse = kwargs.get('sparse', False)
-  wmode = kwargs.get('wmode', False)
-  squeeze = kwargs.get('squeeze', True) # internal option to package
+def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True) :
+  # sqeeze is intended as an internal option
+  '''
+  '''
 
   N2,f0 = reshape3d(dh,N2,f0)
   nl,si_y,si_x = N2.shape
@@ -133,7 +131,7 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False):
   N2,f0 = reshape3d(dh,N2,f0)
   nl,si_y,si_x = N2.shape
 
-  S = gamma_stretch(dh,N2,squeeze=False,**kwargs)
+  S = gamma_stretch(dh,N2,f0, squeeze=False)
 
   # put variables in right format
   Ht = np.sum(dh)
