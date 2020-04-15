@@ -131,7 +131,7 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False):
   N2,f0 = reshape3d(dh,N2,f0)
   nl,si_y,si_x = N2.shape
 
-  S = gamma_stretch(dh,N2,f0, squeeze=False)
+  S = gamma_stretch(dh,N2,f0,wmode,squeeze=False)
 
   # put variables in right format
   Ht = np.sum(dh)
