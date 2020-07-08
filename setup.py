@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='qgutils',
-      version='0.2',
+      version='0.3.0',
       description='QG routines',
       url='http://github.com/bderembl/qgutils',
       author='bderembl',
