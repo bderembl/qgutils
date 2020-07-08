@@ -2,6 +2,7 @@
 
 import numpy as np
 
+# basic spectral tools for data in square domains
 
 def radial_average(spec_2D,Delta):
   ''' Compute the azimuthal avearge of the 2D spectrum '''
@@ -14,7 +15,7 @@ def radial_average(spec_2D,Delta):
     Nbin = kfilt.sum()
     spec_1D[i] = (spec_2D[kfilt].sum())*kr[i]/Nbin
   spec_1D *= 2*np.pi # azimuthal average
-  return spec_1D
+  return kr, spec_1D
 
 
 def get_len_wavenumber(N,Delta):
@@ -45,20 +46,22 @@ def get_spec_2D(psi1,psi2,Delta):
   psi2_hat = np.fft.fft2(psi2)*Delta**2
   spec_2D = (psi1_hat*psi2_hat.conj()).real
   spec_2D = np.fft.fftshift(spec_2D)
-  return spec_2D
+  N,naux = psi1.shape
+  k,l,K,kr = get_wavenumber(N,Delta)
+  return k, l, spec_2D
 
 
 def get_spec_1D(psi1,psi2,Delta):
   ''' Compute the 2D power spectrum of the data '''
 
-  spec_2D = get_spec_2D(psi1,psi2,Delta)
-  spec_1D = radial_average(spec_2D,Delta)
-  return spec_1D
+  k, l, spec_2D = get_spec_2D(psi1,psi2,Delta)
+  kr, spec_1D = radial_average(spec_2D,Delta)
+  return kr, spec_1D
 
 
 def get_flux(psi1,psi2,Delta):
   ''' Compute flux'''
-  spec_2D = get_spec_2D(psi1,psi2,Delta)
+  k, l, spec_2D = get_spec_2D(psi1,psi2,Delta)
 
   # kr,spec_1D = radial_average(spec_2D,Delta)
   # flux = -np.cumsum(spec_1D)*dk # integrate from low wavenumbers
@@ -72,5 +75,5 @@ def get_flux(psi1,psi2,Delta):
   for i in range(kr.size):
     kfilt =  (kr[i] <= K ) 
     flux[i] = (spec_2D[kfilt]).sum()*dk*dk
-  return flux
+  return kr, flux
 
