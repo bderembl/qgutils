@@ -34,7 +34,7 @@ def get_wavenumber(N,Delta):
   return k,l,K,kr
 
 
-def get_spec_2D(psi1,psi2,Delta):
+def get_spec_2D(psi1, psi2, Delta, window=None):
   ''' Compute the 2D power spectrum of the data 
 
    normalization such that parseval is ok: 
@@ -42,26 +42,36 @@ def get_spec_2D(psi1,psi2,Delta):
      = np.sum(psi_hat*psi_hat.conj()).real*dk**2 
      ~ np.sum(spec_1D)*dk '''
   
+  N,naux = psi1.shape
+  k,l,K,kr = get_wavenumber(N,Delta)
+
+  if window == 'hanning':
+    win1d = np.hanning(N)
+    window = win1d[None,:]*win1d[:,None]
+  else:
+    window = np.ones((N,N))
+
+  psi1 = window*psi1
+  psi2 = window*psi2
+
   psi1_hat = np.fft.fft2(psi1)*Delta**2
   psi2_hat = np.fft.fft2(psi2)*Delta**2
   spec_2D = (psi1_hat*psi2_hat.conj()).real
   spec_2D = np.fft.fftshift(spec_2D)
-  N,naux = psi1.shape
-  k,l,K,kr = get_wavenumber(N,Delta)
   return k, l, spec_2D
 
 
-def get_spec_1D(psi1,psi2,Delta):
+def get_spec_1D(psi1, psi2, Delta, window=None):
   ''' Compute the 2D power spectrum of the data '''
 
-  k, l, spec_2D = get_spec_2D(psi1,psi2,Delta)
+  k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
   kr, spec_1D = radial_average(spec_2D,Delta)
   return kr, spec_1D
 
 
-def get_flux(psi1,psi2,Delta):
+def get_flux(psi1,psi2,Delta,window=None):
   ''' Compute flux'''
-  k, l, spec_2D = get_spec_2D(psi1,psi2,Delta)
+  k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
 
   # kr,spec_1D = radial_average(spec_2D,Delta)
   # flux = -np.cumsum(spec_1D)*dk # integrate from low wavenumbers
