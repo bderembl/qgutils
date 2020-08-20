@@ -160,7 +160,10 @@ def restriction(psi):
     psi = coarsen(psi,1)
     si = psi.shape
     l = int(np.log2(si[1]))
-    psic[l] = psi
+    if nd == 2:
+      psic[l] = np.squeeze(psi,0)
+    else:
+      psic[l] = psi
 
   return psic
 
@@ -199,4 +202,21 @@ def inverse_wavelet(w, bc='dirichlet'):
   for l in range(0,depth):
     psi = refine(psi, 1, bc) + w[l+1]
 
+  return psi
+
+
+def wavelet_lowpass(psi, filt_level, bc='dirichlet'):
+  """
+  Wavelet filter
+  """
+  nd = psi.ndim
+  si = psi.shape
+  depth = int(np.log2(si[1]))
+
+  w = wavelet(psi,bc)
+  for l in range(0,depth+1):
+    if l > filt_level:
+      w[l] = 0*w[l]
+
+  psi = inverse_wavelet(w)
   return psi

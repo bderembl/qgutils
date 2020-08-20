@@ -4,7 +4,7 @@ import numpy as np
 
 # basic spectral tools for data in square domains
 
-def radial_average(spec_2D,Delta):
+def radial_average(spec_2D, Delta):
   ''' Compute the azimuthal avearge of the 2D spectrum '''
 
   N,naux = spec_2D.shape
@@ -24,8 +24,11 @@ def get_len_wavenumber(N,Delta):
   return (int(kx.max()/dk)-1)
 
 
-def get_wavenumber(N,Delta):
-  ''' Compute wavenumber and radial wavenumber '''
+def get_wavenumber(N, Delta):
+  '''
+  Compute wavenumber and radial wavenumber 
+  wave number are in cycle per unit length
+  '''
   kx = np.fft.fftshift(np.fft.fftfreq(N,Delta)) # two sided  
   k,l = np.meshgrid(kx,kx)
   K = np.sqrt(k**2 + l**2)  
@@ -69,7 +72,7 @@ def get_spec_1D(psi1, psi2, Delta, window=None):
   return kr, spec_1D
 
 
-def get_flux(psi1,psi2,Delta,window=None):
+def get_flux(psi1, psi2, Delta, window=None):
   ''' Compute flux'''
   k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
 

@@ -1,6 +1,11 @@
 * Changelog
 
-** [0.4.0]                                                       :unreleased:
+** [0.3.1]                                                       :unreleased:
+*** added
+    - preliminary window handling 
+*** changed
+    - spectral tools return wave number instead of just spectra
+
 
 ** [0.3.0] <2020-07-08 Wed>
 
