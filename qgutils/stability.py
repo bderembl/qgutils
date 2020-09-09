@@ -38,6 +38,30 @@ def growth_rate_kl(U, V, dh, N2, f0=1.0, beta=0, nu=0, nu4=0, bf=0, si_k = 50, k
 
   '''
   Compute growth rate of the most unstable mode in (k,l) space
+
+  Parameters
+  ----------
+
+  U : large-scale zonal velocity [nz]
+  U : large-scale meridional velocity [nz]
+  dh: layer thickness [nz]
+  N2 : brunt vaisala frequency [nz-1]
+  f0 : coriolis parameter
+  beta: beta 
+  nu: harmonic viscosity
+  nu4: bi-harmonic viscosity
+  bf: bottom friction
+  si_k: number of grid points in spectral space
+  kmax: size of the spectral window
+
+  Returns
+  -------
+  
+  kt: zonal wave number (cycle per unit length) [si_k]
+  lt: meridional wave number [si_k/2]
+  omega: growth rate of the most unstable mode [sik/2,si_k]
+  eigenvectors: of the most unstable mode [sik/2,si_k,nz]
+
   '''
 
   nl = len(dh)
@@ -58,7 +82,7 @@ def growth_rate_kl(U, V, dh, N2, f0=1.0, beta=0, nu=0, nu4=0, bf=0, si_k = 50, k
   for il in range(0,si_l):
     for ik in range(0,si_k):
           
-      mat1, mat2 = prepare_evp(kt[ik], lt[il], S, dqbdy, dqbdx, U, V, nu, nu4, bf)
+      mat1, mat2 = prepare_evp(2*np.pi*kt[ik], 2*np.pi*lt[il], S, dqbdy, dqbdx, U, V, nu, nu4, bf)
       try:
         eival,eivec = la.eig(mat1,mat2)
       except:
