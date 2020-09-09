@@ -11,40 +11,6 @@ from .grid import *
 
 # PV related stuff
 
-def reshape3d(dh,N2,f0, **kwargs):
-
-  '''
-  Convert all arrays to 3d arrays
-  '''
-
-  nd = N2.ndim
-  si = N2.shape
-  nl = si[0]
-  si_z = len(dh)
-  if nl != si_z - 1:
-    print("N2 should be the size of dh - 1")
-    sys.exit(1)
-
-  psi = kwargs.get('psi', np.zeros(si_z))
-
-  if np.isscalar(f0):
-    f0 = np.array([f0]).reshape(1,1)
-
-  if nd == 1:
-    N2 = N2.reshape((nl,1,1))
-    psi = psi.reshape((si_z,1,1))
-    f0 = f0.reshape(1,1)
-  elif nd == 2:
-    N2 = N2.reshape((nl,si[1],1))
-    psi = psi.reshape((si_z,si[1],1))
-    f0 = f0.reshape(si[1],1)
-
-  if 'psi' in kwargs:
-    return N2,f0,psi
-  else:
-    return N2,f0
-
-
 def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True) :
   # sqeeze is intended as an internal option
   '''

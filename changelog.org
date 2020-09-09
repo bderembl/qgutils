@@ -1,6 +1,11 @@
 * Changelog
 
-** [0.3.1]                                                       :unreleased:
+** [0.4.0] <2020-09-09 Wed>
+*** Added
+    - linear stability analysis
+    - compute velocity
+
+** [0.3.1]
 *** added
     - preliminary window handling 
 *** changed
