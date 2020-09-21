@@ -1,5 +1,9 @@
 * Changelog
 
+** [0.6.0] <2020-09-21 Mon>
+*** Added
+- preliminary multigrid solver
+
 ** [0.5.0] <2020-09-21 Mon>
 *** Added
 - faster mode computation with symmetric matrices 
