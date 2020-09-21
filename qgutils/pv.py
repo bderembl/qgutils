@@ -11,44 +11,84 @@ from .grid import *
 
 # PV related stuff
 
-def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True) :
+def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense') :
   # sqeeze is intended as an internal option
   '''
+    Parameters
+  ----------
+
+  dh : array [nz]
+  N2 : array [nz (,ny,nx)]
+  f0 : scalar or array [(ny,nx)]
+  mat_format : 'dense', 'diag', 'sym_diag'
+  wmode : Bool
+
+  Returns
+  -------
+  
+  if mat_format == "dense"
+  S: array [nz,nz (,ny,nx)]
+  if mat_format == "diag"
+  S: main diagonal, lower diagonal, upper diagonal array [nz,3 (,ny,nx)]
+  if mat_format == "sym_diag"
+  S: main diagonal, sqrt(lower diagonal*upper diagonal), transformation matrix array [nz,3 (,ny,nx)]
+
   '''
 
   N2,f0 = reshape3d(dh,N2,f0)
   nl,si_y,si_x = N2.shape
 
   if wmode:
-    S = np.zeros((nl,nl,si_y,si_x))
+    if mat_format == 'dense':
+      S = np.zeros((nl,nl,si_y,si_x))
+    else:
+      S = np.zeros((nl,3,si_y,si_x))
   else:
-    S = np.zeros((nl+1,nl+1,si_y,si_x))
+    if mat_format == 'dense':
+      S = np.zeros((nl+1,nl+1,si_y,si_x))
+    else:
+      S = np.zeros((nl+1,3,si_y,si_x))
 
   sloc = np.zeros((nl+1,nl+1))
   for j,i in np.ndindex((si_y,si_x)):
   
     dhi = 0.5*(dh[1:] + dh[:-1])
   
-    diag_p1 = 1/(dh[:-1]*dhi*N2[:,j,i])
-    diag_m1 = 1/(dh[1:]*dhi*N2[:,j,i])
+    diag_p1 = f0[j,i]**2/(dh[:-1]*dhi*N2[:,j,i])
+    diag_m1 = f0[j,i]**2/(dh[1:]*dhi*N2[:,j,i])
   
     if wmode:
       diag0 = -diag_p1 - diag_m1    
       # switch diagonals on purpose for wmode
       #      diagonals = [diag0,diag_p1[1:],diag_m1[:-1]]
-      np.fill_diagonal(S[:,:,j,i],f0[j,i]**2*diag0)
-      np.fill_diagonal(S[1:,:,j,i],f0[j,i]**2*diag_p1[1:])
-      np.fill_diagonal(S[:,1:,j,i],f0[j,i]**2*diag_m1[:-1])
+      if mat_format == "dense":
+        np.fill_diagonal(S[:,:,j,i],diag0)
+        np.fill_diagonal(S[1:,:,j,i],diag_p1[1:])
+        np.fill_diagonal(S[:,1:,j,i],diag_m1[:-1])
+      else:
+        S[:,0,j,i] = diag0
+        S[:-1,1,j,i] = diag_p1[1:]
+        S[:-1,2,j,i] = diag_m1[:-1]
     else:
       diag0 = -np.append(diag_p1,0.)
       diag0[1:] = diag0[1:] - diag_m1
       #      diagonals = [diag0,diag_m1,diag_p1]
-      np.fill_diagonal(S[:,:,j,i],f0[j,i]**2*diag0)
-      np.fill_diagonal(S[1:,:,j,i],f0[j,i]**2*diag_m1)
-      np.fill_diagonal(S[:,1:,j,i],f0[j,i]**2*diag_p1)
+      if mat_format == "dense":
+        np.fill_diagonal(S[:,:,j,i],diag0)
+        np.fill_diagonal(S[1:,:,j,i],diag_m1)
+        np.fill_diagonal(S[:,1:,j,i],diag_p1)
+      else:
+        S[:,0,j,i] = diag0
+        S[:-1,1,j,i] = diag_m1
+        S[:-1,2,j,i] = diag_p1
 
-  
-  
+    
+  if mat_format == "sym_diag":
+    S[:,1,:,:] = np.sqrt(S[:,1,:,:]*S[:,2,:,:])
+    S[1:,2,:,:] = np.cumprod(S[:-1,1,:,:]/S[:-1,2,:,:],0)
+    S[0,2,:,:] = 1
+
+
 #    Sloc = diags(diagonals, [0, -1, 1])
   
     # Sloc = f0[j,i]**2*Sloc
@@ -66,7 +106,7 @@ def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True) :
   else:
     return S
 
-def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False):
+def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
   '''compute eigenvalues (and eigenvectors) of the sturm-liouville
   equation 
 
@@ -92,12 +132,38 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False):
   the w_modes are related to the p_modes by
   w_modes = -1/N2 d p_modes/dz
 
+
+  Parameters
+  ----------
+
+  dh : array [nz]
+  N2 : array [nz (,ny,nx)]
+  f0 : scalar or array [(ny,nx)]
+  eivec : Bool
+  wmode : Bool
+  diag : Bool
+    Use transformation matrix to solve a symetric matrix
+
+  Returns
+  -------
+  
+  if eivec == T
+  Rd: array [nz (,ny,nx)]
+  lay2mod: array [nz,nz (,ny,nx)]
+  mod2lay: array [nz,nz (,ny,nx)]
+
+  if eivec == F
+  Rd: array [nz (,ny,nx)]
+
   '''
 
   N2,f0 = reshape3d(dh,N2,f0)
   nl,si_y,si_x = N2.shape
 
-  S = gamma_stretch(dh,N2,f0,wmode,squeeze=False)
+  if diag:
+    S = gamma_stretch(dh,N2,f0,wmode=wmode,squeeze=False,mat_format="sym_diag")
+  else:
+    S = gamma_stretch(dh,N2,f0,wmode=wmode,squeeze=False)
 
   # put variables in right format
   Ht = np.sum(dh)
@@ -120,9 +186,17 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False):
   for j,i in np.ndindex((si_y,si_x)):
 
     if eivec:
-      iRd2, eigl,eigr= la.eig(S[:,:,j,i],left=True)
+      if diag:
+        iRd2, eigs = la.eigh_tridiagonal(S[:,0,j,i], S[:-1,1,j,i])
+        eigr = S[:,2,j,i,None]*eigs # D*w
+        eigl = eigs/S[:,2,j,i,None] # w*D^-1 if eigenvectors are stored in lines but eigl is eigl.T so we do D^-1*w
+      else:
+        iRd2, eigl,eigr= la.eig(S[:,:,j,i],left=True)
     else:
-      iRd2 = la.eig(S[:,:,j,i],right=False)
+      if diag:
+        iRd2 = la.eigvalsh_tridiagonal(S[:,0,j,i], S[:-1,1,j,i])
+      else:
+        iRd2 = la.eig(S[:,:,j,i],right=False)
   
     iRd2 = -iRd2.real
     idx = np.argsort(iRd2)
@@ -144,16 +218,21 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False):
         scap = np.sum(dhicol*eigr*eigr*N2col*cm.T**2,0)
       else:
         scap = np.sum(dhcol*eigr*eigr,0)
-      eigr = eigr*np.sqrt(Ht/scap)*np.sign(eigr[0,:])
+      flip = np.sign(eigr[0,:])
+      eigr = eigr*np.sqrt(Ht/scap)*flip
       
+
       # # scalar product
       # if wmode:
       #   check = np.sum(N2col.T*eigr[:,1]*eigr[:,1]*dhicol.T*(Rd_loc[1]*f0[j,i])**2)
       # else:
       #   check = np.sum(dhcol.T*eigr[:,2]*eigr[:,2])/Ht
   
-      scap2 =  np.sum(eigl*eigr,0)
-      eigl = eigl/scap2
+      if diag:
+        eigl = eigl/np.sqrt(Ht/scap)*flip
+      else:
+        scap2 =  np.sum(eigl*eigr,0)
+        eigl = eigl/scap2
 
       lay2mod[:,:,j,i] = eigl.T
       mod2lay[:,:,j,i] = eigr

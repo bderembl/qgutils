@@ -1,5 +1,9 @@
 * Changelog
 
+** [0.5.0] <2020-09-21 Mon>
+*** Added
+- faster mode computation with symmetric matrices 
+
 ** [0.4.0] <2020-09-09 Wed>
 *** Added
     - linear stability analysis

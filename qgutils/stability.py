@@ -6,7 +6,7 @@ import scipy.linalg as la
 from .grid import *
 from .pv import *
 
-def prepare_evp(k, l, S, dqbdy, dqbdx, U, V, nu, nu4, bf):
+def prepare_evp(k, l, S, dqbdy, dqbdx, U, V, nu=0, nu4=0, bf=0):
   '''
   Compute matrices of the eigenvalue problem
   '''
