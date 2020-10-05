@@ -29,10 +29,12 @@ def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense')
   if mat_format == "dense"
   S: array [nz,nz (,ny,nx)]
   if mat_format == "diag"
-  S: main diagonal, lower diagonal, upper diagonal array [nz,3 (,ny,nx)]
+  S: upper diagonal, main diagonal, lower diagonal, array [3, nz (,ny,nx)]
   if mat_format == "sym_diag"
-  S: main diagonal, sqrt(lower diagonal*upper diagonal), transformation matrix array [nz,3 (,ny,nx)]
+  S: sqrt(lower diagonal*upper diagonal), main diagonal,[1, cumprod(sqrt(lower/upper))], array [3, nz (,ny,nx)]
 
+
+  densefromdiag = spdiags(alldiags, np.array([1, 0, -1]),si_z,si_z).toarray()
   '''
 
   N2,f0 = reshape3d(dh,N2,f0)
@@ -42,20 +44,25 @@ def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense')
     if mat_format == 'dense':
       S = np.zeros((nl,nl,si_y,si_x))
     else:
-      S = np.zeros((nl,3,si_y,si_x))
+      S = np.zeros((3,nl,si_y,si_x))
   else:
     if mat_format == 'dense':
       S = np.zeros((nl+1,nl+1,si_y,si_x))
     else:
-      S = np.zeros((nl+1,3,si_y,si_x))
+      S = np.zeros((3,nl+1,si_y,si_x))
 
   sloc = np.zeros((nl+1,nl+1))
   for j,i in np.ndindex((si_y,si_x)):
   
     dhi = 0.5*(dh[1:] + dh[:-1])
-  
-    diag_p1 = f0[j,i]**2/(dh[:-1]*dhi*N2[:,j,i])
-    diag_m1 = f0[j,i]**2/(dh[1:]*dhi*N2[:,j,i])
+
+    diag_p1 = np.divide(f0[j,i]**2, dhi*N2[:,j,i], out=np.zeros_like(dhi), where=N2[:,j,i]!=0)
+    
+    diag_m1 = diag_p1/dh[1:]
+    diag_p1 = diag_p1/dh[:-1]
+
+    # diag_p1 = f0[j,i]**2/(dh[:-1]*dhi*N2[:,j,i])
+    # diag_m1 = f0[j,i]**2/(dh[1:]*dhi*N2[:,j,i])
   
     if wmode:
       diag0 = -diag_p1 - diag_m1    
@@ -66,9 +73,9 @@ def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense')
         np.fill_diagonal(S[1:,:,j,i],diag_p1[1:])
         np.fill_diagonal(S[:,1:,j,i],diag_m1[:-1])
       else:
-        S[:,0,j,i] = diag0
-        S[:-1,1,j,i] = diag_p1[1:]
-        S[:-1,2,j,i] = diag_m1[:-1]
+        S[0,1:,j,i] = diag_m1[:-1] # upper diag
+        S[1,:,j,i] = diag0
+        S[2,:-1,j,i] = diag_p1[1:]  # lower diag
     else:
       diag0 = -np.append(diag_p1,0.)
       diag0[1:] = diag0[1:] - diag_m1
@@ -78,15 +85,15 @@ def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense')
         np.fill_diagonal(S[1:,:,j,i],diag_m1)
         np.fill_diagonal(S[:,1:,j,i],diag_p1)
       else:
-        S[:,0,j,i] = diag0
-        S[:-1,1,j,i] = diag_m1
-        S[:-1,2,j,i] = diag_p1
+        S[0,1:,j,i] = diag_p1 # upper diag
+        S[1,:,j,i] = diag0
+        S[2,:-1,j,i] = diag_m1 # lower diag
 
     
   if mat_format == "sym_diag":
-    S[:,1,:,:] = np.sqrt(S[:,1,:,:]*S[:,2,:,:])
-    S[1:,2,:,:] = np.cumprod(S[:-1,1,:,:]/S[:-1,2,:,:],0)
-    S[0,2,:,:] = 1
+    S[0,:-1,:,:] = np.sqrt(S[0,1:,:,:]*S[2,:-1,:,:])
+    S[2,1:,:,:] = np.cumprod(S[2,:-1,:,:]/S[0,:-1,:,:],0)
+    S[2,0,:,:] = 1
 
 
 #    Sloc = diags(diagonals, [0, -1, 1])
@@ -159,14 +166,19 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
 
   N2,f0 = reshape3d(dh,N2,f0)
   nl,si_y,si_x = N2.shape
-
+  
+  mat_format = "dense"
   if diag:
-    S = gamma_stretch(dh,N2,f0,wmode=wmode,squeeze=False,mat_format="sym_diag")
-  else:
-    S = gamma_stretch(dh,N2,f0,wmode=wmode,squeeze=False)
+    mat_format = "sym_diag"
+
+  S = gamma_stretch(dh,N2,f0,wmode=wmode,squeeze=False,mat_format=mat_format)
+
+  nlt = (N2 == 0).argmax(axis=0)
+  nlt = np.where(nlt == 0,nl,nlt)
 
   # put variables in right format
-  Ht = np.sum(dh)
+  Ht = np.cumsum(dh)
+#  Ht = np.sum(dh)
   dhi = 0.5*(dh[1:] + dh[:-1])
   dhcol = dh[:,None]
   dhicol = dhi[:,None]
@@ -178,6 +190,7 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
       mod2lay = np.zeros((nl,nl,si_y,si_x))
       lay2mod = np.zeros((nl,nl,si_y,si_x))
   else:
+    nlt = nlt + 1
     Rd = np.zeros((nl+1,si_y,si_x))
     if eivec:
       mod2lay = np.zeros((nl+1,nl+1,si_y,si_x))
@@ -187,16 +200,16 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
 
     if eivec:
       if diag:
-        iRd2, eigs = la.eigh_tridiagonal(S[:,0,j,i], S[:-1,1,j,i])
-        eigr = S[:,2,j,i,None]*eigs # D*w
-        eigl = eigs/S[:,2,j,i,None] # w*D^-1 if eigenvectors are stored in lines but eigl is eigl.T so we do D^-1*w
+        iRd2, eigs = la.eigh_tridiagonal(S[1,:nlt[j,i],j,i], S[0,:nlt[j,i]-1,j,i])
+        eigr = S[2,:nlt[j,i],j,i,None]*eigs # D*w
+        eigl = eigs/S[2,:nlt[j,i],j,i,None] # w*D^-1 if eigenvectors are stored in lines but eigl is eigl.T so we do D^-1*w
       else:
-        iRd2, eigl,eigr= la.eig(S[:,:,j,i],left=True)
+        iRd2, eigl,eigr= la.eig(S[:nlt[j,i],:nlt[j,i],j,i],left=True)
     else:
       if diag:
-        iRd2 = la.eigvalsh_tridiagonal(S[:,0,j,i], S[:-1,1,j,i])
+        iRd2 = la.eigvalsh_tridiagonal(S[1,:nlt[j,i],j,i], S[0,:nlt[j,i]-1,j,i])
       else:
-        iRd2 = la.eig(S[:,:,j,i],right=False)
+        iRd2 = la.eig(S[:nlt[j,i],:nlt[j,i],j,i],right=False)
   
     iRd2 = -iRd2.real
     idx = np.argsort(iRd2)
@@ -204,22 +217,25 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
     iRd2 = iRd2[idx]
     with np.errstate(divide='ignore', invalid='ignore'):
       Rd_loc = 1./np.sqrt(iRd2)
-    Rd[:,j,i] = Rd_loc
+
+    Rd[:nlt[j,i],j,i] = Rd_loc
 
     if eivec:  
       eigl = eigl[:,idx]
       eigr = eigr[:,idx]
     
       # Normalize eigenvectors
-      N2col = N2[:,j,i][:,None]
-      cm = Rd_loc[:,None]*f0[j,i]
+      N2col = N2[:nlt[j,i],j,i][:,None]
+      cm = Rd_loc[:nlt[j,i],None]*f0[j,i]
   
       if wmode:
-        scap = np.sum(dhicol*eigr*eigr*N2col*cm.T**2,0)
+        scap = np.sum(dhi[:nlt[j,i],None]*eigr*eigr*N2col*cm.T**2,0)
+        Htt = Ht[nlt[j,i]]
       else:
-        scap = np.sum(dhcol*eigr*eigr,0)
+        scap = np.sum(dh[:nlt[j,i],None]*eigr*eigr,0)
+        Htt = Ht[nlt[j,i]-1]
       flip = np.sign(eigr[0,:])
-      eigr = eigr*np.sqrt(Ht/scap)*flip
+      eigr = eigr*np.sqrt(Htt/scap)*flip
       
 
       # # scalar product
@@ -229,13 +245,13 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
       #   check = np.sum(dhcol.T*eigr[:,2]*eigr[:,2])/Ht
   
       if diag:
-        eigl = eigl/np.sqrt(Ht/scap)*flip
+        eigl = eigl/np.sqrt(Htt/scap)*flip
       else:
         scap2 =  np.sum(eigl*eigr,0)
         eigl = eigl/scap2
 
-      lay2mod[:,:,j,i] = eigl.T
-      mod2lay[:,:,j,i] = eigr
+      lay2mod[:nlt[j,i],:nlt[j,i],j,i] = eigl.T
+      mod2lay[:nlt[j,i],:nlt[j,i],j,i] = eigr
   
   if eivec:  
     return Rd.squeeze(), lay2mod.squeeze(), mod2lay.squeeze()
@@ -290,7 +306,10 @@ def p2stretch(psi,dh,N2,f0):
 
   # with the inner diff, we get -b
   # we pad the outer diff with zeros (BC: d psi/dz = 0)
-  q_stretch = f0**2*np.diff(np.diff(psi,1,0)/N2/dhi[:,None,None],1,0,0,0)/dh[:,None,None]
+#  q_stretch = f0**2*np.diff(np.diff(psi,1,0)/N2/dhi[:,None,None],1,0,0,0)/dh[:,None,None]
+  q_stretch = f0**2*np.diff(np.divide(np.diff(psi,1,0), dhi[:,None,None]*N2, out=np.zeros_like(N2), where=N2!=0),1,0,0,0)/dh[:,None,None]
+
+
   #  qf = np.einsum('ijkl,jkl->ikl',gamma,pf)
 
   return q_stretch.squeeze()
