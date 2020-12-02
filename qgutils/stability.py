@@ -173,6 +173,7 @@ def init_file_stability(filename, U, V, dh, N2, f0=1.0, beta=0, nu=0, nu4=0, bf=
       U = U[...,None]
       V = V[...,None]
       N2 = N2[...,None]
+      nd = U.ndim
       if np.isscalar(f0):
         f0 = np.array([f0]).reshape(1,1)
       else:

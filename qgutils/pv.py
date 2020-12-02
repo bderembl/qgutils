@@ -11,6 +11,39 @@ from .grid import *
 
 # PV related stuff
 
+def gprime2N2(dh, gprime):
+  '''
+
+  Compute the Brunt Vaisala frequency squared N2 from the reduced gravity g'
+
+
+    Parameters
+  ----------
+
+  dh : array [nz]
+  gprime : array [nz (,ny,nx)]
+
+  Returns
+  -------
+
+  N2 : array[nz (,ny,nx)]
+ 
+  '''
+
+  if np.isscalar(gprime):
+    gprime = np.array([gprime]).reshape(1,1)
+
+  nd = gprime.ndim
+  while nd < 3:
+    gprime = gprime[...,None]
+    nd = gprime.ndim
+
+  dhi = 0.5*(dh[1:] + dh[:-1])
+  N2 = gprime/dhi[:,None,None]
+
+  return N2.squeeze((1,2))
+
+
 def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense') :
   # sqeeze is intended as an internal option
   '''
@@ -114,7 +147,8 @@ def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense')
     return S
 
 def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
-  '''compute eigenvalues (and eigenvectors) of the sturm-liouville
+  '''
+  Compute eigenvalues (and eigenvectors) of the sturm-liouville
   equation 
 
        d  ( f^2  d     )     1

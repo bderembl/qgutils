@@ -7,7 +7,7 @@ import sys
 # array handling
 
 
-def reshape3d(dh,N2,f0, **kwargs):
+def reshape3d(dh,N2,f0=1, **kwargs):
 
   '''
   Convert all arrays to 3d arrays
@@ -37,6 +37,8 @@ def reshape3d(dh,N2,f0, **kwargs):
 
   if 'psi' in kwargs:
     return N2,f0,psi
+  elif f0 == 1:
+    return N2
   else:
     return N2,f0
 
