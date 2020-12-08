@@ -71,7 +71,7 @@ def pad_bc(psi, bc='dirichlet'):
     psi = psi[None,:,:]
 
   # only pad horizontal dimensions
-  psi = np.pad(psi,((0,0),(1,1),(1,1)))
+  psi = np.pad(psi,((0,0),(1,1),(1,1)),'constant')
 
   if (bc == 'dirichlet'): 
     psi[:,0,:]  = -psi[:,1,:]
