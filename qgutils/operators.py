@@ -6,7 +6,7 @@ import sys
 from .grid import *
 
 
-def jacobian(p, q, Delta=1, pad=True):
+def jacobian(p, q, Delta, pad=True):
   
   """
   Compute Arakawa Jacobian J(p,q) = dp/dx dq/dy - dp/dy dq/dx
