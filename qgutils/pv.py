@@ -124,8 +124,10 @@ def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense')
 
     
   if mat_format == "sym_diag":
-    S[0,:-1,:,:] = np.sqrt(S[0,1:,:,:]*S[2,:-1,:,:])
-    S[2,1:,:,:] = np.cumprod(S[2,:-1,:,:]/S[0,:-1,:,:],0)
+    # matrix is stored in upper diagonal form
+    S[0,1:,:,:] = np.sqrt(S[0,1:,:,:]*S[2,:-1,:,:])
+    S[0,0,:,:] = 0
+    S[2,1:,:,:] = np.cumprod(S[2,:-1,:,:]/S[0,1:,:,:],0)
     S[2,0,:,:] = 1
 
 
@@ -234,14 +236,14 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
 
     if eivec:
       if diag:
-        iRd2, eigs = la.eigh_tridiagonal(S[1,:nlt[j,i],j,i], S[0,:nlt[j,i]-1,j,i])
+        iRd2, eigs = la.eigh_tridiagonal(S[1,:nlt[j,i],j,i], S[0,1:nlt[j,i],j,i])
         eigr = S[2,:nlt[j,i],j,i,None]*eigs # D*w
         eigl = eigs/S[2,:nlt[j,i],j,i,None] # w*D^-1 if eigenvectors are stored in lines but eigl is eigl.T so we do D^-1*w
       else:
         iRd2, eigl,eigr= la.eig(S[:nlt[j,i],:nlt[j,i],j,i],left=True)
     else:
       if diag:
-        iRd2 = la.eigvalsh_tridiagonal(S[1,:nlt[j,i],j,i], S[0,:nlt[j,i]-1,j,i])
+        iRd2 = la.eigvalsh_tridiagonal(S[1,:nlt[j,i],j,i], S[0,1:nlt[j,i],j,i])
       else:
         iRd2 = la.eig(S[:nlt[j,i],:nlt[j,i],j,i],right=False)
   
