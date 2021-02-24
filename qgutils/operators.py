@@ -55,3 +55,24 @@ def jacobian(p, q, Delta, pad=True):
 
 
   return jac.squeeze()
+
+
+def interp_on_b(p, dh):
+
+  """
+  Interpolate a field defined at the dynamical levels onto the buoyancy levels
+
+  Parameters
+  ----------
+
+  p : array [nz,ny,nx]
+  dh : array [nz]
+
+  Returns
+  -------
+
+  p_b: array [nz-1, ny,nx]
+  """
+
+  # weighted average (cf. Holland 1978)
+  return (p[:-1,:,:]*dh[1:,None,None] + p[1:,:,:]*dh[:-1,None,None])/(dh[:-1,None,None] + dh[1:,None,None])
