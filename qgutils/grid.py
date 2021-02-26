@@ -7,10 +7,13 @@ import sys
 # array handling
 
 
-def reshape3d(dh,N2,f0=1, **kwargs):
+def reshape3d(dh,N2, f0=1, **kwargs):
 
   '''
   Convert all arrays to 3d arrays
+
+  ---> this function is a mess......
+
   '''
 
   nd = N2.ndim
@@ -22,9 +25,12 @@ def reshape3d(dh,N2,f0=1, **kwargs):
     sys.exit(1)
 
   psi = kwargs.get('psi', np.zeros(si_z))
+  returnf = 1
 
   if np.isscalar(f0):
     f0 = np.array([f0]).reshape(1,1)
+    if f0 == 1:
+      returnf = 0
 
   if nd == 1:
     N2 = N2.reshape((nl,1,1))
@@ -37,10 +43,10 @@ def reshape3d(dh,N2,f0=1, **kwargs):
 
   if 'psi' in kwargs:
     return N2,f0,psi
-  elif f0 == 1:
+  elif returnf == 0:
     return N2
   else:
-    return N2,f0
+    return N2, f0
 
 
 # Horizontal grid functions
@@ -166,15 +172,16 @@ def refine(psi, n=1, bc='dirichlet'):
   if nd == 2:
     psi = psi[None,:,:]
 
+  a=0.5625; b=0.1875; c= 0.0625
   for i in range(0,n):
     si = psi.shape
     psi_f = np.zeros((si[0], 2*si[1], 2*si[2]))
 
     psi = pad_bc(psi ,bc)
-    psi_f[:,::2,::2]   = (9*psi[:,1:-1,1:-1] + 3*(psi[:,:-2,1:-1] + psi[:,1:-1,:-2]) + psi[:,:-2,:-2])/16
-    psi_f[:,1::2,::2]  = (9*psi[:,1:-1,1:-1] + 3*(psi[:,2: ,1:-1] + psi[:,1:-1,:-2]) + psi[:,2: ,:-2])/16
-    psi_f[:,::2,1::2]  = (9*psi[:,1:-1,1:-1] + 3*(psi[:,:-2,1:-1] + psi[:,1:-1, 2:]) + psi[:,:-2,2:])/16
-    psi_f[:,1::2,1::2] = (9*psi[:,1:-1,1:-1] + 3*(psi[:,2: ,1:-1] + psi[:,1:-1, 2:]) + psi[:,2: ,2:])/16
+    psi_f[:,::2,::2]   = (a*psi[:,1:-1,1:-1] + b*(psi[:,:-2,1:-1] + psi[:,1:-1,:-2]) + c*psi[:,:-2,:-2])
+    psi_f[:,1::2,::2]  = (a*psi[:,1:-1,1:-1] + b*(psi[:,2: ,1:-1] + psi[:,1:-1,:-2]) + c*psi[:,2: ,:-2])
+    psi_f[:,::2,1::2]  = (a*psi[:,1:-1,1:-1] + b*(psi[:,:-2,1:-1] + psi[:,1:-1, 2:]) + c*psi[:,:-2,2:])
+    psi_f[:,1::2,1::2] = (a*psi[:,1:-1,1:-1] + b*(psi[:,2: ,1:-1] + psi[:,1:-1, 2:]) + c*psi[:,2: ,2:])
 
     psi = psi_f
 
@@ -182,6 +189,26 @@ def refine(psi, n=1, bc='dirichlet'):
     psi = np.squeeze(psi,0)
 
   return psi
+
+def smooth(psi, n=1, bc='dirichlet'):
+  """
+  Smooth data by coarsening and refining input data
+
+  Parameters
+  ----------
+  psi : narray [nz (,ny,nx)]
+  n   : int 
+    number of coarsening and refining
+  bc : str
+    type of boundary condition: 'dirichlet' or 'neumann'
+
+  Returns
+  -------
+  psi_f: array [nz (,ny*2^n,nx*2^n)]
+    smoothed array
+  """
+
+  return refine(coarsen(psi,n),n, bc)
 
 
 def restriction(psi):
@@ -245,18 +272,58 @@ def inverse_wavelet(w, bc='dirichlet'):
   return psi
 
 
-def wavelet_lowpass(psi, filt_level, bc='dirichlet'):
+def wavelet_lowpass(psi, l_cut, Delta, bc='dirichlet'):
   """
   Wavelet filter
+
+
+  Parameters
+  ----------
+
+  psi : array [(nz,)  ny,nx]
+  l_cut : float or array [ny,nx]
+  Delta   : grid step
+  bc   : 'dirichlet' or 'neumann'
+
+  Returns
+  -------
+
+  psi_filt: array [nz (,ny,nx)]
+
   """
+
   nd = psi.ndim
   si = psi.shape
   depth = int(np.log2(si[1]))
 
-  w = wavelet(psi,bc)
-  for l in range(0,depth+1):
-    if l > filt_level:
-      w[l] = 0*w[l]
+  L0 = si[1]*Delta
 
-  psi = inverse_wavelet(w)
-  return psi
+  if np.isscalar(l_cut):
+    l_cut = l_cut*np.ones((si[1],si[1]))
+
+  sig_lev = wavelet(l_cut,bc)
+  sig_filt = restriction(l_cut)
+
+  for l in range(depth,-1,-1):
+    Delta = L0/2**l
+    for j,i in np.ndindex((2**l,2**l)):
+      ref_flag = 0
+      if (l < depth):
+        ref_flag = np.sum(sig_lev[l+1][2*j:2*j+2,2*i:2*i+2])
+      if (ref_flag > 0):
+        sig_lev[l][j,i] = 1
+      else:
+        if (sig_filt[l][j,i] > 2*Delta):
+          sig_lev[l][j,i] = 0
+        elif (sig_filt[l][j,i] <= 2*Delta and sig_filt[l][j,i] > Delta):
+          sig_lev[l][j,i] = 1-(sig_filt[l][j,i]-Delta)/Delta
+        else:
+          sig_lev[l][j,i]= 1
+
+  w = wavelet(psi,bc)
+
+  for l in range(0,depth+1):
+    w[l] = sig_lev[l]*w[l]
+
+  psi_f = inverse_wavelet(w)
+  return psi_f

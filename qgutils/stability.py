@@ -64,7 +64,7 @@ def growth_rate_kl(U, V, dh, N2, f0=1.0, beta=0, nu=0, nu4=0, bf=0, sd=0, si_k =
   beta: beta 
   nu: harmonic viscosity
   nu4: bi-harmonic viscosity
-  bf: bottom friction
+  bf: bottom friction = Ekb/(Rom*2*dh[-1])
   sd: surface damping
   si_k: number of grid points in spectral space
   kmax: size of the spectral window
@@ -194,7 +194,7 @@ def init_file_stability(filename, U, V, dh, N2, f0=1.0, beta=0, nu=0, nu4=0, bf=
     np.save(filename, instab_data)
 
 
-def loop_growthrate(filename, flag_print=False):
+def loop_growthrate(filename, periodic_save=0, flag_print=False):
 
   '''
   Loop over grid points in pickle file and do linear stability analysis
@@ -203,6 +203,7 @@ def loop_growthrate(filename, flag_print=False):
   ----------
 
   filename : path of backup
+  periodic_save: backup up every 'periodic_save', if 0, 
   flag_print : Bool
 
   '''
@@ -218,8 +219,9 @@ def loop_growthrate(filename, flag_print=False):
 
       nco += 1
       # periodic save
-      if nco%60 == 0:
-        np.save(filename, instab_data)
+      if periodic_save:
+        if nco%periodic_save == 0:
+          np.save(filename, instab_data)
 
       kt,lt,omegai_c,eivec_c = growth_rate_kl(instab_data['U'][:,j,i], instab_data['V'][:,j,i], instab_data['dh'][:], instab_data['N2'][:,j,i], instab_data['f0'][j,i], instab_data['beta'], instab_data['nu'], instab_data['nu4'], instab_data['bf'], instab_data['sd'], instab_data['si_k'], instab_data['kmax'][j,i])
   
@@ -241,9 +243,9 @@ def loop_growthrate(filename, flag_print=False):
         if np.abs(om_bdy0) > instab_data['omin']:
           instab_data['conv'][j,i] = -1 # enlarge window
           instab_data['kmax'][j,i] = 1.2*instab_data['kmax'][j,i]
-        elif np.abs(om_bdy1) <= instab_data['omin']:
-          instab_data['conv'][j,i] = -2 # reduce window
-          instab_data['kmax'][j,i] = 0.8*instab_data['kmax'][j,i]
+        # elif np.abs(om_bdy1) <= instab_data['omin']:
+        #   instab_data['conv'][j,i] = -2 # reduce window
+        #   instab_data['kmax'][j,i] = 0.8*instab_data['kmax'][j,i]
       else:
         if np.sum(omegai_c[:,:]) == 0: # no instability
           instab_data['conv'][j,i] = 2
