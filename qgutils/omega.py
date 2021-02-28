@@ -34,7 +34,7 @@ def get_w(psi,dh,N2,f0,Delta):
   '''  
 
 
-  N2,f0,psi = reshape3d(dh,N2,f0,psi=psi)
+  N2,f0 = reshape3d(dh,N2,f0)
 
   zeta = laplacian(psi, Delta)
   b = p2b(psi,dh,f0)
