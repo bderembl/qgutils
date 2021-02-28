@@ -3,6 +3,7 @@
 import numpy as np
 
 from .pv import *
+from .operators import *
 
 # 
 
