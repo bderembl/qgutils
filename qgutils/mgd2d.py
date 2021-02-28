@@ -290,10 +290,10 @@ def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1):
   if nd < 3:
     rhs = rhs[None,:,:]
 
-  nd2 = N2.ndim
-  if nd2>1:
-    print("Does not work yet for variable N2 or f .. yet")
-    sys.exit(1)
+  # nd2 = N2.ndim
+  # if nd2>1:
+  #   print("Does not work yet for variable N2 or f .. yet")
+  #   sys.exit(1)
 
   nl,ny,nx = np.shape(rhs)
   nlevels = np.log2(nx) + 1

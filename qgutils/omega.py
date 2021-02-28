@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from .grid import *
 from .pv import *
 from .mgd2d import *
 from .operators import *
