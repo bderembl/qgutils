@@ -279,7 +279,7 @@ def FMG(num_levels,f, L0, Jacrelax, Smat=1, nv=1,level=1):
 
 
 
-def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1):
+def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1, ws=None, wb=None):
   '''
   wrap multigrid
   L0 is the total length of the domain
@@ -289,6 +289,20 @@ def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1):
   
   if nd < 3:
     rhs = rhs[None,:,:]
+  else:
+      if ws is not None:
+          if ws.ndim < 2:
+              print("Surface boundary condition needs to be 2D.")
+              sys.exit(1)
+          if type(dh) == float:
+              rhs[0] -= f0**2/dh**2 * ws
+          else:
+              rhs[0] -= 2*f0**2/dh[0]/(dh[0]+dh[1]) * ws
+      if wb is not None:
+          if type(dh) == float:
+              rhs[-1] -= f0**2/dh**2 * wb
+          else:
+              rhs[-1] -= 2*f0**2/dh[-1]/(dh[-2]+dh[-1]) * wb
 
   # nd2 = N2.ndim
   # if nd2>1:
