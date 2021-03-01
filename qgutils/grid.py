@@ -50,6 +50,24 @@ def reshape3d(dh,N2, f0=1, **kwargs):
 
 
 # Horizontal grid functions
+def interp_on_c(psi):
+  """
+  Interpolate field from cell corner to cell center.
+
+  Parameters
+  ----------
+
+  psi : array [(nz), ny+1,nx+1]
+
+  Returns
+  -------
+
+  psi: array [(nz), ny,nx]
+  """
+  
+  return 0.25*(psi[...,1:,1:] + psi[...,:-1,:-1]
+               + psi[...,1:,:-1]+ psi[...,:-1,1:])
+
 
 def pad_bc(psi, bc='dirichlet'):
   """
