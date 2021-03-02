@@ -28,7 +28,8 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing=0):
   f0 : scalar
   N2 : array [nz]
   Delta: scalar
-  bf : scalar  (bottom friction coef = Ekb/(Rom*2*dh[-1]) )
+  bf : scalar  (bottom friction coef = d_e *f0/(2*dh[-1]) with d_e the thickness 
+  of the bottom Ekman layer, or bf = Ekb/(Rom*2*dh[-1]) with non dimensional params)
   forcing : array [ny,nx] (exactly the same as the rhs of the PV eq.)
 
   Returns
