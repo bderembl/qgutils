@@ -9,15 +9,15 @@ from .operators import *
 
 # 
 
-def get_w(psi,dh,N2,f0,Delta,ws=None,dEk=0.):
+def get_w(psi,dh,N2,f0,Delta,bf=0, forcing=0):
   '''
-  Solve the omega equation without forcing and dissipation 
+  Solve the omega equation with surface and bottom boundary conditions
   (cf. Vallis - chap 5.4.4)
 
 
-     f^2   d  (  d     )                   d     
-     ---   -- (  -- psi)  + del^2 psi =  f -- J(psi,zeta)  -del^2 J(psi,b) 
-     N^2   dz (  dz    )                   dz    
+     f^2   d  (  d     )                 1  (  d                              )  
+     ---   -- (  -- psi)  + del^2 psi = --- (f -- J(psi,zeta)  -del^2 J(psi,b)) 
+     N^2   dz (  dz    )                N^2 (  dz                             )
 
 
   Parameters
@@ -28,8 +28,8 @@ def get_w(psi,dh,N2,f0,Delta,ws=None,dEk=0.):
   f0 : scalar
   N2 : array [nz]
   Delta: scalar
-  ws : array [ny,nx]
-  dEk : scalar
+  bf : scalar  (bottom friction coef = Ekb/(Rom*2*dh[-1]) )
+  forcing : array [ny,nx] (exactly the same as the rhs of the PV eq.)
 
   Returns
   -------
@@ -48,16 +48,16 @@ def get_w(psi,dh,N2,f0,Delta,ws=None,dEk=0.):
   jpz = jacobian(psi, zeta, Delta)
   jpb = jacobian(psi_b, b, Delta)
      
-  # missing forcing and dissipation
   rhs = p2b(jpz,dh,f0) - laplacian(jpb,Delta)
   
-  if dEk != 0.:
-      wb = .5*dEk * zeta[-1]
-  else:
-      wb = None
+  # boundary conditions for w
+  w_bc = np.zeros_like(psi)
+  w_bc[0,:,:] = forcing
+  w_bc[-1,:,:] = -bf*zeta[-1,:,:]
+  w_bc = p2b(w_bc,dh,f0)
 
-  rhs = rhs/N2
+  rhs = (rhs - w_bc)/N2
 
-  w = solve_mg(rhs, Delta, "w", dh, N2, f0, ws=ws, wb=wb)
+  w = solve_mg(rhs, Delta, "w", dh, N2, f0)
 
   return w
