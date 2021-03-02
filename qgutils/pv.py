@@ -390,7 +390,7 @@ def laplacian(psi, Delta=1, bc='dirichlet'):
   si = psi.shape
 
   if nd == 1:
-    print("not handeling 1d arrays")
+    print("not handling 1d arrays")
     sys.exit(1)
   elif nd == 2: 
     psi = psi.reshape(1,si[0],si[1])
