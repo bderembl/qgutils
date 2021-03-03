@@ -410,7 +410,31 @@ def p2q(psi,dh,N2,f0,Delta,**kwargs):
 
 ## routines from spoisson
 # general poisson
-def poisson2d(n, Delta=1, bc='dirichlet'):
+def laplace2d(n, Delta=1, bc='dirichlet', ila2=0):
+  """
+  Creates a sparse matrix
+
+             d^2    d^2
+     L =     ---- + ---- + ila2
+             dx^2   dy^2
+
+  with il2 a scalar
+
+  Computes
+
+  Parameters
+  ----------
+
+  n : int (number of points in x)
+  Delta : scalar
+  bc : 'dirichlet or 'neumann'
+  ila2: scalar
+
+  Returns
+  -------
+
+  L: csr_matrix sparse matrix
+  """
 
   iDelta2 = 1/Delta**2
 
@@ -426,7 +450,7 @@ def poisson2d(n, Delta=1, bc='dirichlet'):
       iz = iz + 1
       row[iz] = k
       col[iz] = k
-      dat[iz] = -4*iDelta2
+      dat[iz] = -4*iDelta2 + ila2
       iz0 = iz
 
       if i > 0:
@@ -485,7 +509,7 @@ def solve(rhs, **kwargs):
   n = np.int(np.sqrt(len(psi)))
 
   # get opt. args
-  L = kwargs.get('mat', poisson2d(n, **kwargs))
+  L = kwargs.get('mat', laplace2d(n, **kwargs))
     
   x = spsolve(L,psi)
 
