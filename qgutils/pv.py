@@ -343,7 +343,7 @@ def p2stretch(psi,dh,N2,f0):
   # with the inner diff, we get -b
   # we pad the outer diff with zeros (BC: d psi/dz = 0)
 #  q_stretch = f0**2*np.diff(np.diff(psi,1,0)/N2/dhi[:,None,None],1,0,0,0)/dh[:,None,None]
-  q_stretch = f0**2*np.diff(np.divide(np.diff(psi,1,0), dhi[:,None,None]*N2, out=np.zeros_like(N2), where=N2!=0),1,0,0,0)/dh[:,None,None]
+  q_stretch = f0**2*np.diff(np.divide(np.diff(psi,1,0), dhi[:,None,None]*N2, out=np.zeros_like(psi[:-1,...]), where=N2!=0),1,0,0,0)/dh[:,None,None]
 
 
   #  qf = np.einsum('ijkl,jkl->ikl',gamma,pf)

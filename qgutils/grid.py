@@ -34,12 +34,14 @@ def reshape3d(dh,N2, f0=1, **kwargs):
 
   if nd == 1:
     N2 = N2.reshape((nl,1,1))
-    psi = psi.reshape((si_z,1,1))
     f0 = f0.reshape(1,1)
   elif nd == 2:
     N2 = N2.reshape((nl,si[1],1))
     psi = psi.reshape((si_z,si[1],1))
     f0 = f0.reshape(si[1],1)
+
+  if psi.ndim == 1:
+    psi = psi.reshape((si_z,1,1))
 
   if 'psi' in kwargs:
     return N2,f0,psi
