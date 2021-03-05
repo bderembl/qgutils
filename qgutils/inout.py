@@ -4,7 +4,6 @@ import numpy as np
 
 
 def write_bas(fname, psi):
-
   """
   Write basilisk format output
 
@@ -38,8 +37,7 @@ def write_bas(fname, psi):
   p_out.astype('f4').tofile(fname)
 
 
-def read_bas(fname, N, nl=1):
-
+def read_bas(fname):
   """
   Read basilisk format file
 
@@ -47,17 +45,18 @@ def read_bas(fname, N, nl=1):
   ----------
 
   fname: file name
-  N: number of points in x direction
-  nl: number of layers (optional)
 
   Returns
   -------
 
   psi : array [(nz,) ny,nx]
-
   """
 
-  psi  = np.fromfile(fname,'f4').reshape(nl,N+1,N+1).transpose(0,2,1)
-  psi  = psi[:,1:,1:]
+  psi  = np.fromfile(fname,'f4')
+  N = int(psi[0])
+  N1 = N + 1
+  nl = int(len(psi)/N1**2)
+
+  psi  = psi.reshape(nl,N+1,N+1).transpose(0,2,1)[:,1:,1:]
 
   return psi.squeeze()
