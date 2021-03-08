@@ -3,9 +3,12 @@
 import numpy as np
 
 # basic spectral tools for data in square domains
+# based on https://github.com/adekunleoajayi/powerspec
 
 def radial_average(spec_2D, Delta):
-  ''' Compute the azimuthal avearge of the 2D spectrum '''
+  '''
+  Compute the azimuthal avearge of the 2D spectrum
+  '''
 
   N,naux = spec_2D.shape
   k,l,K,kr = get_wavenumber(N,Delta)
@@ -29,6 +32,7 @@ def get_wavenumber(N, Delta):
   Compute wavenumber and radial wavenumber 
   wave number are in cycle per unit length
   '''
+
   kx = np.fft.fftshift(np.fft.fftfreq(N,Delta)) # two sided  
   k,l = np.meshgrid(kx,kx)
   K = np.sqrt(k**2 + l**2)  
@@ -38,12 +42,32 @@ def get_wavenumber(N, Delta):
 
 
 def get_spec_2D(psi1, psi2, Delta, window=None):
-  ''' Compute the 2D power spectrum of the data 
+  ''' 
+  Compute the 2D cross power spectrum of psi1 and psi2
+  If psi1=psi2, then this is simply the power spectrum
 
    normalization such that parseval is ok: 
-   E = np.sum(psi**2)*Delta**2 
-     = np.sum(psi_hat*psi_hat.conj()).real*dk**2 
-     ~ np.sum(spec_1D)*dk '''
+   E = 1/V*(np.sum(psi**2)*Delta**2) = np.sum(psi**2)/N**2
+     = np.sum(spec_2D)*dk**2
+     ~ np.sum(spec_1D)*dk
+  
+  with V = (N*Delta)**2
+
+  Parameters
+  ----------
+
+  psi1 : array [ny,nx]
+  psi2 : array [ny,nx]
+  Delta: grid step
+  window: None or "hanning"
+
+  Returns
+  -------
+
+  k: array [ny,nx] zonal wave numbers
+  l: array [ny,nx] meridional wave numbers
+  spec_2D: array [ny,nx] 2d spectra
+  '''
   
   N,naux = psi1.shape
   k,l,K,kr = get_wavenumber(N,Delta)
@@ -57,15 +81,17 @@ def get_spec_2D(psi1, psi2, Delta, window=None):
   psi1 = window*psi1
   psi2 = window*psi2
 
-  psi1_hat = np.fft.fft2(psi1)*Delta**2
-  psi2_hat = np.fft.fft2(psi2)*Delta**2
-  spec_2D = (psi1_hat*psi2_hat.conj()).real
+  psi1_hat = np.fft.fft2(psi1)
+  psi2_hat = np.fft.fft2(psi2)
+  spec_2D = (psi1_hat*psi2_hat.conj()).real*Delta**2/N**2
   spec_2D = np.fft.fftshift(spec_2D)
   return k, l, spec_2D
 
 
 def get_spec_1D(psi1, psi2, Delta, window=None):
-  ''' Compute the 2D power spectrum of the data '''
+  '''
+  Compute the 1D power spectrum of the data
+  '''
 
   k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
   kr, spec_1D = radial_average(spec_2D,Delta)
@@ -73,7 +99,9 @@ def get_spec_1D(psi1, psi2, Delta, window=None):
 
 
 def get_flux(psi1, psi2, Delta, window=None):
-  ''' Compute flux'''
+  '''
+  Compute flux
+  '''
   k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
 
   # kr,spec_1D = radial_average(spec_2D,Delta)
