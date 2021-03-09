@@ -6,21 +6,56 @@ from .grid import *
 from .pv import *
 
 
-def comp_vel(psi, Delta):
+def comp_vel(psi, Delta, loc='center'):
 
   '''
-  Compute velocity at cell center
+  Compute velocity at cell center or cell faces
 
   u = -d psi /dy
   v =  d psi /dx
 
+  Cell center vs faces:
+
+  +----u_f----+----u_f----+
+  |           |           |
+  |           |           |
+ v_f  u,v_c  v_f  u,v_c  v_f
+  |           |           |
+  |           |           |
+  +----u_f----+----u_f----+
+
+  **warning**
+  cell faces do not correspond to a C-grid:
+  v_f is defined at the *eas-west* faces
+  u_f is defined at the *north-south* faces
+
+  Parameters
+  ----------
+
+  psi : array [(nz,) ny,nx]
+  Delta: float
+  loc: 'center' or 'faces' (default center)
+
+  Returns
+  -------
+  
+  size of returned arry depend on loc:
+  if center -> ny,nx
+  if faces -> ny+1,nx and ny,nx+1
+
+  u: array [nz, ny(+1),nx]
+  v: array [nz, ny,nx(+1)]
   '''
 
   psi_pad = pad_bc(psi)
 
-  u = (psi_pad[:,:-2,1:-1] - psi_pad[:,2:,1:-1])/(2*Delta)
-  v = (psi_pad[:,1:-1,2:] - psi_pad[:,1:-1,:-2])/(2*Delta)
-
+  if loc == 'center':
+    u = (psi_pad[...,:-2,1:-1] - psi_pad[...,2:,1:-1])/(2*Delta)
+    v = (psi_pad[...,1:-1,2:] - psi_pad[...,1:-1,:-2])/(2*Delta)
+  elif loc == 'faces':
+    u = (psi_pad[...,:-1,1:-1] - psi_pad[...,1:,1:-1])/Delta
+    v = (psi_pad[...,1:-1,1:] - psi_pad[...,1:-1,:-1])/Delta
+    
   return u,v
 
 
@@ -34,37 +69,23 @@ def comp_ke(psi, Delta):
   Parameters
   ----------
 
-  psi : array [nz, ny,nx]
+  psi : array [(nz,) ny,nx]
   Delta: float
 
   Returns
   -------
 
-  KE: array [nz, ny,nx]
+  KE: array [(nz,) ny,nx]
 
   '''
 
-  nd = psi.ndim
-  si = psi.shape
-  N = si[-1]
-  if nd != 3:
-    print("dimension of psi should be [nz, ny,nx]")
-    sys.exit(1)
-
-  psipad = pad_bc(psi)
-  v0 = np.diff(psipad,1,axis=2)/Delta
-  #v = 0.5*(v0[:,1:-1,1:] + v0[:,1:-1,:-1])
-
-  u0 = -np.diff(psipad,1,axis=1)/Delta
-  #u = 0.5*(u0[:,1:,1:-1] + u0[:,:-1,1:-1])
-
-  # need to interpolate u^2 and v^2 and *not* u and v
+  # need to interpolate u^2 and v^2 at cell center and *not* u and v
   # So that if we compare the integral of ke and the integral of 0.5*q*p
   # we get the same answer within machine precision
-  ke_v = 0.5*0.5*(v0[:,1:-1,1:]**2 + v0[:,1:-1,:-1]**2)
-  ke_u = 0.5*0.5*(u0[:,1:,1:-1]**2 + u0[:,:-1,1:-1]**2)
+  u,v = comp_vel(psi, Delta, loc='faces')
 
-  ke = ke_u + ke_v
+  ke = 0.25*(v[...,:,1:]**2 + v[...,:,:-1]**2 +
+             u[...,1:,:]**2 + u[...,:-1,:]**2)
 
   return ke
 
