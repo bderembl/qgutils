@@ -126,3 +126,72 @@ def comp_pe(psi, dh,N2,f0,Delta):
   pe = 0.5*b**2/N2
 
   return pe
+
+
+def integral_plev(psi, dh, Delta, average=False):
+
+  '''
+  Compute integral of a field defined at a p-level
+
+
+  Parameters
+  ----------
+
+  psi : array [nz, ny,nx]
+  dh : array [nz]
+  Delta: float
+  average: if True: divide the integral by the total volume (default is False)
+
+  Returns
+  -------
+
+  psi_i = scalar
+
+  '''
+  si = psi.shape
+  N = si[-1]
+
+  Ht = np.sum(dh)
+
+  if average:
+    psi_i = np.sum(psi*dh[:,None,None])/Ht/N**2
+  else:
+    psi_i = np.sum(psi*dh[:,None,None])*Delta*Delta
+
+  return psi_i
+
+
+def integral_blev(psi, dh, Delta, average=False):
+
+  '''
+  Compute integral of a field defined at a b-level
+
+
+  Parameters
+  ----------
+
+  psi : array [nz-1, ny,nx]
+  dh : array [nz] **dh is the layer thickness of the p-level**
+  Delta: float
+  average: if True: divide the integral by the total volume (default is False)
+
+  Returns
+  -------
+
+  psi_i = scalar
+
+  '''
+
+  si = psi.shape
+  N = si[-1]
+
+  dhi = 0.5*(dh[1:] + dh[:-1])
+  Ht = np.sum(dh) # we still divide by the total thickness (assume b=0 at top and
+                  # bottom)
+
+  if average:
+    psi_i = np.sum(psi*dhi[:,None,None])/Ht/N**2
+  else:
+    psi_i = np.sum(psi*dhi[:,None,None])*Delta*Delta
+
+  return psi_i
