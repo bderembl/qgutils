@@ -26,8 +26,8 @@ def azimuthal_integral(spec_2D, Delta, all_kr=False):
   '''
 
   N,naux = spec_2D.shape
-  k,l,K,kr = get_wavenumber(N,Delta, all_kr=False)
-  dk = kr[0]
+  k,l,K,kr = get_wavenumber(N,Delta, all_kr)
+  dk = kr[1] - kr[0]
   spec_1D = np.zeros(len(kr))
   for i in range(kr.size):
     kfilt =  (K>=kr[i] - 0.5*dk) & (K<kr[i] + 0.5*dk)
@@ -38,8 +38,6 @@ def azimuthal_integral(spec_2D, Delta, all_kr=False):
     spec_1D[i] = (spec_2D[kfilt].sum())*dk #*kr[i]*2*np.pi/Nbin
   # the loop is missing the value at K=0:
   # add it only with all_kr option
-  if all_kr:
-    spec_1D[0] += spec_2D[int(N/2),int(N/2)]*dk
   return kr, spec_1D
 
 
@@ -74,7 +72,7 @@ def get_wavenumber(N, Delta, all_kr=False):
   elif all_kr == True:
     kmax = K.max()
     dk = np.abs(kx[2]-kx[1])
-    kr = dk*np.arange(1,int(kmax/dk)+1)
+    kr = dk*np.arange(0,int(kmax/dk)+2)
   return k,l,K,kr
 
 
