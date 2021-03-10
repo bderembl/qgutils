@@ -28,10 +28,10 @@ def azimuthal_integral(spec_2D, Delta):
   spec_1D = np.zeros(len(kr))
   for i in range(kr.size):
     kfilt =  (K>=kr[i] - 0.5*dk) & (K<kr[i] + 0.5*dk)
-    Nbin = kfilt.sum()
     # the azimuthal integral is the averge value*2*pi*k
     # but to get an equal integral for the 1d spetrum and 2d spectrum
     # it is better to just sum the cells*dk
+    #Nbin = kfilt.sum()
     spec_1D[i] = (spec_2D[kfilt].sum())*dk #*kr[i]*2*np.pi/Nbin
   # the loop is missing the value at K=0:
   spec_1D[0] += spec_2D[int(N/2),int(N/2)]*dk
