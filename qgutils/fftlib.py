@@ -5,7 +5,7 @@ import numpy as np
 # basic spectral tools for data in square domains
 # based on https://github.com/adekunleoajayi/powerspec
 
-def azimuthal_integral(spec_2D, Delta):
+def azimuthal_integral(spec_2D, Delta, all_kr=False):
   '''
   Compute the azimuthal integral of a 2D spectra
 
@@ -14,6 +14,9 @@ def azimuthal_integral(spec_2D, Delta):
 
   spec_2D: array [ny,nx] 2d spectra
   Delta: float, grid step
+  all_kr: bool. if False, only get radial wave number
+    in the inner circle, if True, gets all wave numbers. 
+    Default is False. You should only use True to check Parseval
 
   Returns
   -------
@@ -23,7 +26,7 @@ def azimuthal_integral(spec_2D, Delta):
   '''
 
   N,naux = spec_2D.shape
-  k,l,K,kr = get_wavenumber(N,Delta)
+  k,l,K,kr = get_wavenumber(N,Delta, all_kr=False)
   dk = kr[0]
   spec_1D = np.zeros(len(kr))
   for i in range(kr.size):
@@ -34,7 +37,9 @@ def azimuthal_integral(spec_2D, Delta):
     #Nbin = kfilt.sum()
     spec_1D[i] = (spec_2D[kfilt].sum())*dk #*kr[i]*2*np.pi/Nbin
   # the loop is missing the value at K=0:
-  spec_1D[0] += spec_2D[int(N/2),int(N/2)]*dk
+  # add it only with all_kr option
+  if all_kr:
+    spec_1D[0] += spec_2D[int(N/2),int(N/2)]*dk
   return kr, spec_1D
 
 
@@ -147,7 +152,7 @@ def get_spec_1D(psi1, psi2, Delta, window=None, all_kr= False):
   '''
 
   k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
-  kr, spec_1D = azimuthal_integral(spec_2D,Delta)
+  kr, spec_1D = azimuthal_integral(spec_2D, Delta, all_kr)
   return kr, spec_1D
 
 
