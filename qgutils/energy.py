@@ -200,9 +200,28 @@ def integral_blev(psi, dh, Delta, average=False):
   return psi_i
 
 
-def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, Re=0, Re4=0, forcing=0):
+def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing=0):
   '''
   Lorenz cycle
+
+  Parameters
+  ----------
+
+  pfiles : list of pressure files
+  dh : array [nz] 
+  N2 : array [nz (,ny,nx)]
+  f0 : scalar or array [ny,nx]
+  Delta: float
+  bf : scalar  (bottom friction coef = d_e *f0/(2*dh[-1]) with d_e the thickness 
+  of the bottom Ekman layer, or bf = Ekb/(Rom*2*dh[-1]) with non dimensional params)
+  nu: scalar, harmonic viscosity
+  nu4: scalar, bi-harmonic viscosity
+  forcing : array [ny,nx] (exactly the same as the rhs of the PV eq.)
+
+  Returns
+  -------
+
+  elc: list of all energy fluxes and energy reservoirs. Sign convention matches name
   '''
 
   nf  = len(pfiles)
@@ -216,9 +235,6 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, Re=0, Re4=0, forcing=0):
   # compute mean
   p_me = np.zeros((nl,N,N))
   w_me = np.zeros((nl-1,N,N))
-
-  dissip_k_me = np.zeros((nl,N,N))
-  dissip_p_me = np.zeros((nl,N,N))
 
   for ifi in range(0,nf):
   
@@ -245,12 +261,10 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, Re=0, Re4=0, forcing=0):
   e_surf   = np.zeros((nl,N,N))
   e_bottom = np.zeros((nl,N,N))
   
-  if Re4 !=0:
-    dissip_k_me = -1/Re4*laplacian(laplacian(z_me,Delta),Delta)
-    dissip_p_me = -1/Re4*laplacian(laplacian(s_me,Delta),Delta)
-  if Re !=0:
-    dissip_k_me += 1/Re*laplacian(z_me,Delta)
-    dissip_p_me += 1/Re*laplacian(s_me,Delta)
+  dissip_k_me = -nu4*laplacian(laplacian(z_me,Delta),Delta)
+  dissip_p_me = -nu4*laplacian(laplacian(s_me,Delta),Delta)
+  dissip_k_me += nu*laplacian(z_me,Delta)
+  dissip_p_me += nu*laplacian(s_me,Delta)
   
   
   bottom_ekman = -bf*laplacian(p_me[-1,:,:],Delta)
@@ -275,9 +289,6 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, Re=0, Re4=0, forcing=0):
   ei_ke_me2ke_p = np.zeros(nf)
   ei_pe_me2pe_p = np.zeros(nf)
   
-  dissip_k = np.zeros((nl,N,N))
-  dissip_p = np.zeros((nl,N,N))
-
   for ifi in range(0,nf):
     
     p = read_bas(pfiles[ifi])
@@ -305,12 +316,10 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, Re=0, Re4=0, forcing=0):
     ke_me2ke_p = -p_me*jpz
     pe_me2pe_p = -p_me*jps
     
-    if Re4 !=0:
-      dissip_k = -1/Re4*laplacian(laplacian(z_p,Delta),Delta)
-      dissip_p = -1/Re4*laplacian(laplacian(s_p,Delta),Delta)
-    if Re !=0:
-      dissip_k += 1/Re*laplacian(z_p,Delta)
-      dissip_p += 1/Re*laplacian(s_p,Delta)
+    dissip_k = -nu4*laplacian(laplacian(z_p,Delta),Delta)
+    dissip_p = -nu4*laplacian(laplacian(s_p,Delta),Delta)
+    dissip_k += nu*laplacian(z_p,Delta)
+    dissip_p += nu*laplacian(s_p,Delta)
 
     bottom_ekman = -bf*laplacian(p_p[-1,:,:],Delta)
   
@@ -328,57 +337,95 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, Re=0, Re4=0, forcing=0):
     ei_pe[ifi]     = integral_blev(pe_p, dh, Delta)
   
 
+  # sign convention matches name
+  f2mke  = ei_surf_me
+  mke2mpe = -ei_wb_me
+  epe2eke = np.mean(ei_wb)
+  mke2eke = np.mean(ei_ke_me2ke_p)
+  mpe2epe = np.mean(ei_pe_me2pe_p)
+  mke2dis = -ei_diss_k_me
+  eke2dis = -np.mean(ei_diss_k)
+  mpe2dis = -ei_diss_p_me
+  epe2dis = -np.mean(ei_diss_p)
+  mke2bf  = -ei_bottom_me
+  eke2bf  = -np.mean(ei_bottom)
+
+  mke = ei_ke_me
+  eke = np.mean(ei_ke)
+  mpe = ei_pe_me
+  epe = np.mean(ei_pe)
+
   plt.figure()
-  plt.text(0.5,0.5  ,"KE_m\n {0:0.0f}".format(ei_ke_me),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
-  plt.text(-0.5,0.5 ,"PE_m\n {0:0.0f}".format(ei_pe_me),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
-  plt.text(-0.5,-0.5,"PE'\n {0:0.0f}".format(np.mean(ei_pe)),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
-  plt.text(0.5,-0.5 ,"KE'\n {0:0.0f}".format(np.mean(ei_ke)),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
+  plt.text(0.5,0.5  ,"MKE\n {0:0.0f}".format(mke),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
+  plt.text(-0.5,0.5 ,"MPE\n {0:0.0f}".format(mpe),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
+  plt.text(-0.5,-0.5,"EPE\n {0:0.0f}".format(epe),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
+  plt.text(0.5,-0.5 ,"EKE\n {0:0.0f}".format(eke),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
   
   # wb
-  wb_sign = np.sign(ei_wb_me)
-  plt.arrow(-wb_sign*0.25,0.5,wb_sign*0.5,0,width=0.01)
-  plt.text(0,0.55, "{0:0.0f}".format(np.abs(ei_wb_me)),horizontalalignment='center', verticalalignment='center')
+  wb_sign = np.sign(mke2mpe)
+  plt.arrow(wb_sign*0.25,0.5,-wb_sign*0.5,0,width=0.01)
+  plt.text(0,0.55, "{0:0.0f}".format(np.abs(mke2mpe)),horizontalalignment='center', verticalalignment='center')
   
-  wb_sign = np.sign(np.mean(ei_wb))
+  wb_sign = np.sign(epe2eke)
   plt.arrow(-wb_sign*0.25,-0.5,wb_sign*0.5,0,width=0.01)
-  plt.text(0,-0.45, "{0:0.0f}".format(np.abs(np.mean(ei_wb))),horizontalalignment='center', verticalalignment='center')
+  plt.text(0,-0.45, "{0:0.0f}".format(np.abs(epe2eke)),horizontalalignment='center', verticalalignment='center')
   
   # mean to eddy
-  k2k_sign = np.sign(np.mean(ei_ke_me2ke_p))
+  k2k_sign = np.sign(mke2eke)
   plt.arrow(0.5,k2k_sign*0.3,0,-k2k_sign*0.5,width=0.01)
-  plt.text(0.6,0, "{0:0.0f}".format(np.abs(np.mean(ei_ke_me2ke_p))))
+  plt.text(0.6,0, "{0:0.0f}".format(np.abs(mke2eke)))
   
-  p2p_sign = np.sign(np.mean(ei_pe_me2pe_p))
+  p2p_sign = np.sign(mpe2epe)
   plt.arrow(-0.5,p2p_sign*0.3,0,-p2p_sign*0.5,width=0.01)
-  plt.text(-0.8,0, "{0:0.0f}".format(np.abs(np.mean(ei_pe_me2pe_p))))
+  plt.text(-0.8,0, "{0:0.0f}".format(np.abs(mpe2epe)))
   
   
   # forcing
   plt.arrow(0.5,1.25,0,-0.5,width=0.01)
-  plt.text(0.55,1, "ws:{0:0.0f}".format(ei_surf_me))
+  plt.text(0.55,1, "ws:{0:0.0f}".format(f2mke))
   
   # viscous dissip
   plt.arrow(0.75,0.6,0.5,0,width=0.01)
-  plt.text(0.75,0.65, "D:{0:0.0f}".format(-ei_diss_k_me))
+  plt.text(1,0.65, "D:{0:0.0f}".format(mke2dis),horizontalalignment='center')
   
   plt.arrow(0.75,-0.4,0.5,0,width=0.01)
-  plt.text(0.75,-0.35, "D:{0:0.0f}".format(-np.mean(ei_diss_k)))
+  plt.text(1,-0.35, "D:{0:0.0f}".format(eke2dis),horizontalalignment='center')
   
   plt.arrow(-0.75,0.5,-0.5,0,width=0.01)
-  plt.text(-1.25,0.55, "D:{0:0.0f}".format(-ei_diss_p_me))
+  plt.text(-1,0.55, "D:{0:0.0f}".format(mpe2dis),horizontalalignment='center')
   
   plt.arrow(-0.75,-0.5,-0.5,0,width=0.01)
-  plt.text(-1.25,-0.45, "D:{0:0.0f}".format(-np.mean(ei_diss_p)))
+  plt.text(-1,-0.45, "D:{0:0.0f}".format(epe2dis),horizontalalignment='center')
   
   # Bottom friction
   plt.arrow(0.75,0.4,0.5,0,width=0.01)
-  plt.text(0.75,0.3, "BF:{0:0.0f}".format(-ei_bottom_me))
+  plt.text(1,0.25, "BF:{0:0.0f}".format(mke2bf),horizontalalignment='center')
   
   plt.arrow(0.75,-0.6,0.5,0,width=0.01)
-  plt.text(0.75,-0.7, "BF:{0:0.0f}".format(-np.mean(ei_bottom)))
+  plt.text(1,-0.75, "BF:{0:0.0f}".format(eke2bf),horizontalalignment='center')
   
   
   plt.xlim([-1.5,1.5])
   plt.ylim([-1.5,1.5])
        
   plt.show()
+
+  elc = {}
+  elc["f2mke"]   = f2mke
+  elc["mke2mpe"] = mke2mpe
+  elc["epe2eke"] = epe2eke
+  elc["mke2eke"] = mke2eke
+  elc["mpe2epe"] = mpe2epe
+  elc["mke2dis"] = mke2dis
+  elc["eke2dis"] = eke2dis
+  elc["mpe2dis"] = mpe2dis
+  elc["epe2dis"] = epe2dis
+  elc["mke2bf"]  = mke2bf
+  elc["eke2bf"]  = eke2bf
+  elc["mke"]     = mke
+  elc["eke"]     = eke
+  elc["mpe"]     = mpe
+  elc["epe"]     = epe
+
+
+  return elc
