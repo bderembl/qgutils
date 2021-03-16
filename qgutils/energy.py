@@ -400,45 +400,45 @@ def draw_lorenz_cycle(lec):
   
   # wb
   wb_sign = np.sign(mke2mpe)
-  plt.arrow(wb_sign*0.25,0.5,-wb_sign*0.5,0,width=0.01)
-  plt.text(0,0.55, "{0:0.0f}".format(np.abs(mke2mpe)),horizontalalignment='center', verticalalignment='center')
+  plt.arrow(wb_sign*0.25,0.5,-wb_sign*0.5,0,width=0.01, length_includes_head=True)
+  plt.text(0,0.6, "{0:0.0f}".format(np.abs(mke2mpe)),horizontalalignment='center', verticalalignment='center')
   
   wb_sign = np.sign(epe2eke)
-  plt.arrow(-wb_sign*0.25,-0.5,wb_sign*0.5,0,width=0.01)
-  plt.text(0,-0.45, "{0:0.0f}".format(np.abs(epe2eke)),horizontalalignment='center', verticalalignment='center')
+  plt.arrow(-wb_sign*0.25,-0.5,wb_sign*0.5,0,width=0.01, length_includes_head=True)
+  plt.text(0,-0.4, "{0:0.0f}".format(np.abs(epe2eke)),horizontalalignment='center', verticalalignment='center')
   
   # mean to eddy
   k2k_sign = np.sign(mke2eke)
-  plt.arrow(0.5,k2k_sign*0.3,0,-k2k_sign*0.5,width=0.01)
+  plt.arrow(0.5,k2k_sign*0.25,0,-k2k_sign*0.5,width=0.01, length_includes_head=True)
   plt.text(0.6,0, "{0:0.0f}".format(np.abs(mke2eke)))
   
   p2p_sign = np.sign(mpe2epe)
-  plt.arrow(-0.5,p2p_sign*0.3,0,-p2p_sign*0.5,width=0.01)
+  plt.arrow(-0.5,p2p_sign*0.25,0,-p2p_sign*0.5,width=0.01, length_includes_head=True)
   plt.text(-0.8,0, "{0:0.0f}".format(np.abs(mpe2epe)))
   
   
   # forcing
-  plt.arrow(0.5,1.25,0,-0.5,width=0.01)
+  plt.arrow(0.5,1.25,0,-0.5,width=0.01, length_includes_head=True)
   plt.text(0.55,1, "ws:{0:0.0f}".format(f2mke))
   
   # viscous dissip
-  plt.arrow(0.75,0.6,0.5,0,width=0.01)
+  plt.arrow(0.75,0.6,0.5,0,width=0.01, length_includes_head=True)
   plt.text(1,0.65, "D:{0:0.0f}".format(mke2dis),horizontalalignment='center')
   
   plt.arrow(0.75,-0.4,0.5,0,width=0.01)
   plt.text(1,-0.35, "D:{0:0.0f}".format(eke2dis),horizontalalignment='center')
   
-  plt.arrow(-0.75,0.5,-0.5,0,width=0.01)
+  plt.arrow(-0.75,0.5,-0.5,0,width=0.01, length_includes_head=True)
   plt.text(-1,0.55, "D:{0:0.0f}".format(mpe2dis),horizontalalignment='center')
   
-  plt.arrow(-0.75,-0.5,-0.5,0,width=0.01)
+  plt.arrow(-0.75,-0.5,-0.5,0,width=0.01, length_includes_head=True)
   plt.text(-1,-0.45, "D:{0:0.0f}".format(epe2dis),horizontalalignment='center')
   
   # Bottom friction
-  plt.arrow(0.75,0.4,0.5,0,width=0.01)
+  plt.arrow(0.75,0.4,0.5,0,width=0.01, length_includes_head=True)
   plt.text(1,0.25, "BF:{0:0.0f}".format(mke2bf),horizontalalignment='center')
   
-  plt.arrow(0.75,-0.6,0.5,0,width=0.01)
+  plt.arrow(0.75,-0.6,0.5,0,width=0.01, length_includes_head=True)
   plt.text(1,-0.75, "BF:{0:0.0f}".format(eke2bf),horizontalalignment='center')
   
   
