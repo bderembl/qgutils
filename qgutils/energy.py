@@ -202,7 +202,7 @@ def integral_blev(psi, dh, Delta, average=False):
 
 def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing=0):
   '''
-  Lorenz cycle
+  Compute Lorenz energy cycle
 
   Parameters
   ----------
@@ -221,7 +221,8 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing=0):
   Returns
   -------
 
-  elc: list of all energy fluxes and energy reservoirs. Sign convention matches name
+  lec: dict of all energy fluxes and energy reservoirs. Sign convention matches name:
+    e.g. if mke2mpe >0 then there is a transfer from mke to mpe
   '''
 
   nf  = len(pfiles)
@@ -338,22 +339,58 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing=0):
   
 
   # sign convention matches name
-  f2mke  = ei_surf_me
-  mke2mpe = -ei_wb_me
-  epe2eke = np.mean(ei_wb)
-  mke2eke = np.mean(ei_ke_me2ke_p)
-  mpe2epe = np.mean(ei_pe_me2pe_p)
-  mke2dis = -ei_diss_k_me
-  eke2dis = -np.mean(ei_diss_k)
-  mpe2dis = -ei_diss_p_me
-  epe2dis = -np.mean(ei_diss_p)
-  mke2bf  = -ei_bottom_me
-  eke2bf  = -np.mean(ei_bottom)
+  lec = {}
+  lec["f2mke"]   = ei_surf_me             
+  lec["mke2mpe"] = -ei_wb_me              
+  lec["epe2eke"] = np.mean(ei_wb)         
+  lec["mke2eke"] = np.mean(ei_ke_me2ke_p) 
+  lec["mpe2epe"] = np.mean(ei_pe_me2pe_p) 
+  lec["mke2dis"] = -ei_diss_k_me          
+  lec["eke2dis"] = -np.mean(ei_diss_k)    
+  lec["mpe2dis"] = -ei_diss_p_me          
+  lec["epe2dis"] = -np.mean(ei_diss_p)    
+  lec["mke2bf"]  = -ei_bottom_me          
+  lec["eke2bf"]  = -np.mean(ei_bottom)    
+  lec["mke"]     = ei_ke_me      
+  lec["eke"]     = np.mean(ei_ke)
+  lec["mpe"]     = ei_pe_me      
+  lec["epe"]     = np.mean(ei_pe)
 
-  mke = ei_ke_me
-  eke = np.mean(ei_ke)
-  mpe = ei_pe_me
-  epe = np.mean(ei_pe)
+  return lec
+
+
+def draw_lorenz_cycle(lec):
+
+  '''
+  Draw Lorenz energy cycle
+
+  Parameters
+  ----------
+
+  lec: dict of all energy fluxes and energy reservoirs from lorenz_cycle function
+
+  Returns
+  -------
+
+  nothing
+
+  '''
+
+  f2mke   = lec["f2mke"]  
+  mke2mpe = lec["mke2mpe"]
+  epe2eke = lec["epe2eke"]
+  mke2eke = lec["mke2eke"]
+  mpe2epe = lec["mpe2epe"]
+  mke2dis = lec["mke2dis"]
+  eke2dis = lec["eke2dis"]
+  mpe2dis = lec["mpe2dis"]
+  epe2dis = lec["epe2dis"]
+  mke2bf  = lec["mke2bf"] 
+  eke2bf  = lec["eke2bf"] 
+  mke     = lec["mke"]    
+  eke     = lec["eke"]    
+  mpe     = lec["mpe"]    
+  epe     = lec["epe"]
 
   plt.figure()
   plt.text(0.5,0.5  ,"MKE\n {0:0.0f}".format(mke),horizontalalignment='center', verticalalignment='center',bbox=dict(boxstyle="round", fc="w"))
@@ -410,22 +447,4 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing=0):
        
   plt.show()
 
-  elc = {}
-  elc["f2mke"]   = f2mke
-  elc["mke2mpe"] = mke2mpe
-  elc["epe2eke"] = epe2eke
-  elc["mke2eke"] = mke2eke
-  elc["mpe2epe"] = mpe2epe
-  elc["mke2dis"] = mke2dis
-  elc["eke2dis"] = eke2dis
-  elc["mpe2dis"] = mpe2dis
-  elc["epe2dis"] = epe2dis
-  elc["mke2bf"]  = mke2bf
-  elc["eke2bf"]  = eke2bf
-  elc["mke"]     = mke
-  elc["eke"]     = eke
-  elc["mpe"]     = mpe
-  elc["epe"]     = epe
-
-
-  return elc
+  return
