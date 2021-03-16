@@ -425,7 +425,7 @@ def draw_lorenz_cycle(lec):
   plt.arrow(0.75,0.6,0.5,0,width=0.01, length_includes_head=True)
   plt.text(1,0.65, "D:{0:0.0f}".format(mke2dis),horizontalalignment='center')
   
-  plt.arrow(0.75,-0.4,0.5,0,width=0.01)
+  plt.arrow(0.75,-0.4,0.5,0,width=0.01, length_includes_head=True)
   plt.text(1,-0.35, "D:{0:0.0f}".format(eke2dis),horizontalalignment='center')
   
   plt.arrow(-0.75,0.5,-0.5,0,width=0.01, length_includes_head=True)
