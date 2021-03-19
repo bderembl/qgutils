@@ -384,7 +384,7 @@ def p2b(psi,dh,f0):
   return b.squeeze()
 
 
-def laplacian(psi, Delta=1, bc='dirichlet'):
+def laplacian(psi, Delta, bc='dirichlet'):
 
   nd = psi.ndim
   si = psi.shape
