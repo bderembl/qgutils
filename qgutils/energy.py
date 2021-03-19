@@ -228,6 +228,7 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   f_me = np.zeros((N,N))
   d_me = np.zeros((N,N))
 
+  n_me = 1
   for it in range(0,si_t):
   
     p = load_generic(pfiles, it, 'p', rescale=1/f0, interp=True, si_t=si_t, subtract_bc=True)
@@ -241,15 +242,11 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
 
     w = get_w(p,dh, N2[:,0,0],f0[0,0], Delta, bf,loc_forcing_z, loc_forcing_b, nu=(not nu_in_b)*nu, nu4=(not nu_in_b)*nu4)
   
-    p_me += p
-    w_me += w
-    f_me += loc_forcing_z
-    d_me += loc_forcing_b
-  
-  p_me /= si_t
-  w_me /= si_t
-  f_me /= si_t
-  d_me /= si_t
+    p_me += (p - p_me)/n_me
+    w_me += (w - w_me)/n_me
+    f_me += (loc_forcing_z - f_me)/n_me
+    d_me += (loc_forcing_b - d_me)/n_me
+    n_me += 1
   
   z_me = laplacian(p_me,Delta)
   b_me = p2b(p_me, dh, f0)
