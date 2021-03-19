@@ -9,15 +9,18 @@ from .operators import *
 
 # 
 
-def get_w(psi,dh,N2,f0,Delta,bf=0, forcing=0):
+def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
   '''
   Solve the omega equation with surface and bottom boundary conditions
   (cf. Vallis - chap 5.4.4)
 
 
-     f^2   d  (  d     )                 1  (  d                              )  
-     ---   -- (  -- psi)  + del^2 psi = --- (f -- J(psi,zeta)  -del^2 J(psi,b)) 
-     N^2   dz (  dz    )                N^2 (  dz                             )
+   f^2  d  ( d    )              1  (  d                                                )  
+   ---  -- ( -- w ) + del^2 w = --- (f -- (J(psi,zeta) - visc) + del^2 (-J(psi,b) + F_b)) 
+   N^2  dz ( dz   )             N^2 (  dz                                               )
+
+  if QG equations are derived from SW there are viscous terms in w 
+  if QG equations are derived from PE there are no viscous terms in w
 
 
   Parameters
@@ -30,7 +33,11 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing=0):
   Delta: scalar
   bf : scalar  (bottom friction coef = d_e *f0/(2*dh[-1]) with d_e the thickness 
   of the bottom Ekman layer, or bf = Ekb/(Rom*2*dh[-1]) with non dimensional params)
-  forcing : array [ny,nx] (exactly the same as the rhs of the PV eq.)
+  forcing_z : array [ny,nx] wind forcing (exactly the same as the rhs of the PV eq.)
+  forcing_b : array [ny,nx]  =(buoyancy forcing)/N2 (entoc)
+  nu: scalar, harmonic viscosity. *if provided, only apply on the vorticity equation*
+  nu4: scalar, biharmonic viscosity. *if provided, only apply on the vorticity equation*
+  
 
   Returns
   -------
@@ -48,16 +55,26 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing=0):
 
   jpz = jacobian(psi, zeta, Delta)
   jpb = jacobian(psi_b, b, Delta)
-     
-  rhs = p2b(jpz,dh,f0) - laplacian(jpb,Delta)
+  
+  del2z = laplacian(zeta, Delta)
+  del4z = laplacian(del2z, Delta)
+
+  rhs = p2b(jpz - nu*del2z + nu4*del4z,dh,f0) - laplacian(jpb,Delta)
   
   # boundary conditions for w
   w_bc = np.zeros_like(psi)
-  w_bc[0,:,:] = forcing
+  w_bc[0,:,:] = forcing_z
   w_bc[-1,:,:] = -bf*zeta[-1,:,:]
   w_bc = p2b(w_bc,dh,f0)
 
   rhs = (rhs - w_bc)/N2
+
+  # buoyancy forcing already divided by N2
+  # TODO: if forcing_b is not 0 at the boundary, the laplacian should take it as an input 
+  # and the elliptic solver should have non zero BC
+  # keep it as is for now because the laplacian and the solver are consistent.
+  if isinstance(forcing_b,np.ndarray):
+    rhs[0,:,:] += laplacian(forcing_b, Delta)
 
   w = solve_mg(rhs, Delta, "w", dh, N2, f0)
 
