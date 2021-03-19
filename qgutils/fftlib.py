@@ -32,12 +32,13 @@ def azimuthal_integral(spec_2D, Delta, all_kr=False):
   for i in range(kr.size):
     kfilt =  (K>=kr[i] - 0.5*dk) & (K<kr[i] + 0.5*dk)
     # the azimuthal integral is the averge value*2*pi*k
-    # but to get an equal integral for the 1d spetrum and 2d spectrum
-    # it is better to just sum the cells*dk
+    # but to get the same value of the integral for the 1d spetrum
+    # and the 2d spectrum, it is better to just sum the cells*dk
+
     #Nbin = kfilt.sum()
     spec_1D[i] = (spec_2D[kfilt].sum())*dk #*kr[i]*2*np.pi/Nbin
   # the loop is missing the value at K=0:
-  # add it only with all_kr option
+  # add it with all_kr option
   return kr, spec_1D
 
 
@@ -154,7 +155,7 @@ def get_spec_1D(psi1, psi2, Delta, window=None, all_kr= False):
   return kr, spec_1D
 
 
-def get_flux(psi1, psi2, Delta, window=None):
+def get_spec_flux(psi1, psi2, Delta, window=None):
   '''
   Compute spectral flux
 
