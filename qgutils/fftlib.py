@@ -12,7 +12,7 @@ def azimuthal_integral(spec_2D, Delta, all_kr=False):
   Parameters
   ----------
 
-  spec_2D: array [ny,nx] 2d spectra
+  spec_2D: array [(nz,) ny,nx] 2d spectra
   Delta: float, grid step
   all_kr: bool. if False, only get radial wave number
     in the inner circle, if True, gets all wave numbers. 
@@ -22,13 +22,17 @@ def azimuthal_integral(spec_2D, Delta, all_kr=False):
   -------
 
   kr: array [nkr]  radial wave number
-  spec_1D: array [nkr] 1d spectra
+  spec_1D: array [(nz,) nkr] 1d spectra
   '''
+  
+  nd = spec_2D.ndim
+  if nd == 2:
+    spec_2D = spec_2D[None,...]
+  nl,N,naux = spec_2D.shape
 
-  N,naux = spec_2D.shape
   k,l,K,kr = get_wavenumber(N,Delta, all_kr)
   dk = kr[1] - kr[0]
-  spec_1D = np.zeros(len(kr))
+  spec_1D = np.zeros((nl,len(kr)))
   for i in range(kr.size):
     kfilt =  (K>=kr[i] - 0.5*dk) & (K<kr[i] + 0.5*dk)
     # the azimuthal integral is the averge value*2*pi*k
@@ -36,10 +40,10 @@ def azimuthal_integral(spec_2D, Delta, all_kr=False):
     # and the 2d spectrum, it is better to just sum the cells*dk
 
     #Nbin = kfilt.sum()
-    spec_1D[i] = (spec_2D[kfilt].sum())*dk #*kr[i]*2*np.pi/Nbin
+    spec_1D[:,i] = (spec_2D[:,kfilt].sum(axis=-1))*dk #*kr[i]*2*np.pi/Nbin
   # the loop is missing the value at K=0:
   # add it with all_kr option
-  return kr, spec_1D
+  return kr, spec_1D.squeeze()
 
 
 def get_wavenumber(N, Delta, all_kr=False):
@@ -94,8 +98,8 @@ def get_spec_2D(psi1, psi2, Delta, window=None):
   Parameters
   ----------
 
-  psi1 : array [ny,nx]
-  psi2 : array [ny,nx]
+  psi1 : array [(nz,) ny,nx]
+  psi2 : array [(nz,) ny,nx]
   Delta: grid step
   window: None or "hanning"
 
@@ -104,10 +108,10 @@ def get_spec_2D(psi1, psi2, Delta, window=None):
 
   k: array [ny,nx] zonal wave numbers
   l: array [ny,nx] meridional wave numbers
-  spec_2D: array [ny,nx] 2d spectra
+  spec_2D: array [(nz,) ny,nx] 2d spectra
   '''
   
-  N,naux = psi1.shape
+  N = psi1.shape[-1]
   k,l,K,kr = get_wavenumber(N,Delta)
 
   if window == 'hanning':
@@ -122,7 +126,7 @@ def get_spec_2D(psi1, psi2, Delta, window=None):
   psi1_hat = np.fft.fft2(psi1)
   psi2_hat = np.fft.fft2(psi2)
   spec_2D = (psi1_hat*psi2_hat.conj()).real*Delta**2/N**2
-  spec_2D = np.fft.fftshift(spec_2D)
+  spec_2D = np.fft.fftshift(spec_2D, axes=(-1,-2))
   return k, l, spec_2D
 
 
@@ -134,8 +138,8 @@ def get_spec_1D(psi1, psi2, Delta, window=None, all_kr= False):
   Parameters
   ----------
 
-  psi1 : array [ny,nx]
-  psi2 : array [ny,nx]
+  psi1 : array [(nz,) ny,nx]
+  psi2 : array [(nz,) ny,nx]
   Delta: grid step
   window: None or "hanning"
   all_kr: bool. if False, only get radial wave number
@@ -146,7 +150,7 @@ def get_spec_1D(psi1, psi2, Delta, window=None, all_kr= False):
   -------
 
   kr: array [N] radial wave number
-  spec_1D: array [N] 1d spectra
+  spec_1D: array [(nz,) N] 1d spectra
 
   '''
 
@@ -162,8 +166,8 @@ def get_spec_flux(psi1, psi2, Delta, window=None):
   Parameters
   ----------
 
-  psi1 : array [ny,nx]
-  psi2 : array [ny,nx]
+  psi1 : array [(nz,) ny,nx]
+  psi2 : array [(nz,) ny,nx]
   Delta: grid step
   window: None or "hanning"
 
@@ -171,7 +175,7 @@ def get_spec_flux(psi1, psi2, Delta, window=None):
   -------
 
   kr: array [N] radial wave number
-  flux: array [N] spectral flux
+  flux: array [(nz,) N] spectral flux
 
   '''
   k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
@@ -180,13 +184,17 @@ def get_spec_flux(psi1, psi2, Delta, window=None):
   # flux = -np.cumsum(spec_1D)*dk # integrate from low wavenumbers
   # flux = np.cumsum(spec_1D[::-1])[::-1]*dk # integrate from high wavenumbers
 
-  N,naux = psi1.shape
+  nd = spec_2D.ndim
+  if nd == 2:
+    spec_2D = spec_2D[None,...]
+  nl,N,naux = spec_2D.shape
+
   k,l,K,kr = get_wavenumber(N,Delta)
   dk = kr[1] - kr[0]
 
-  flux = np.zeros(len(kr))
+  flux = np.zeros((nl,len(kr)))
   for i in range(kr.size):
     kfilt =  (kr[i] <= K ) 
-    flux[i] = (spec_2D[kfilt]).sum()*dk*dk
-  return kr, flux
+    flux[:,i] = (spec_2D[:,kfilt]).sum(axis=-1)*dk*dk
+  return kr, flux.squeeze()
 
