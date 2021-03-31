@@ -198,3 +198,97 @@ def get_spec_flux(psi1, psi2, Delta, window=None):
     flux[:,i] = (spec_2D[:,kfilt]).sum(axis=-1)*dk*dk
   return kr, flux.squeeze()
 
+
+def convolve2D(psi1, psi2, norm=False, psi_s=1, kr=0, k_target=0, dk=1, K=0):
+  '''
+  Convolution of psi1 and psi2 (assume these two fields are in spectral space)
+
+  Parameters
+  ----------
+
+  psi1 : array [ny,nx] Shiffted Fourier coefs of psi1
+  psi2 : array [ny,nx] Shiffted Fourier coefs of psi1
+  norm: Bool if True, normalize the convolution by 1/N**2 (optional)
+  psi_s : array [ny,nx] Shiffted Fourier coefs of psi_s (for scalar product)(optional)
+  kr: array [N] radial wave number (optional)
+  k_target: float (optional)
+  dk: float (optional)
+  K: wave number magnitude (optional)
+
+  Returns
+  -------
+
+  out: array [ny,nx], convolution of psi1*psi2
+  kmag: array [ny,nx], magnitude of k (1st dimension is K of psi2 second dimension is K of psi1)
+
+  '''
+
+  # only convol odd arrays
+  si = psi1.shape
+  N = si[-1]
+  Nc = int((N-1)/2)
+
+  if norm:
+    cnorm = 1/N**2  # N or N-1??
+  else:
+    cnorm = 1
+
+  flag_reshape = 0
+  if N % 2 == 0:
+    flag_reshape = 1
+    psi1 = psi1[1:,1:]
+    psi2 = psi2[1:,1:]
+    if isinstance(K,np.ndarray):
+      K = K[1:,1:]
+    if isinstance(psi_s,np.ndarray):
+      psi_s = psi_s[1:,1:]
+
+  si = psi1.shape
+  N = si[-1]
+  Nc = int((N-1)/2)
+
+  if not isinstance(psi_s,np.ndarray):
+    psi_s = np.ones((N,N))
+
+  out = np.zeros_like(psi1)
+
+  if k_target:
+    nk = len(kr)
+    kmag = np.zeros((nk,nk))
+    kfilt = (K>=k_target - 0.5*dk) & (K<k_target + 0.5*dk)
+  else:
+    nk = 1
+    kmag = np.zeros((nk,nk))
+    kfilt = np.zeros((N,N))
+
+  psif = np.flip(np.flip(psi2,-1),-2)
+
+  for j,i in np.ndindex((N,N)):
+
+    # indices of the flipped matrix
+    i1 = None if i >= Nc else Nc-i
+    i2 = None if i <= Nc else Nc-i
+    j1 = None if j >= Nc else Nc-j
+    j2 = None if j <= Nc else Nc-j
+
+    # indices of the non-flipped matrix
+    k1 = None if i <= Nc else i-Nc
+    k2 = None if i >= Nc else i-Nc
+    l1 = None if j <= Nc else j-Nc
+    l2 = None if j >= Nc else j-Nc
+    #print("(",i,",",j,")",i1,i2,j1,j2, "--", k1,k2,l1,l2)
+    out[j,i] = psi_s[j,i].conj()*np.sum(psif[j1:j2,i1:i2]*psi1[l1:l2,k1:k2])*cnorm
+
+    if kfilt[j,i]:
+      k_ind1 = np.round((K[l1:l2,k1:k2]/dk).flatten()).astype(int)
+      k_ind2 = np.round((K[j1:j2,i1:i2]/dk).flatten()).astype(int)
+      kmag[k_ind2,k_ind1] += (psi_s[j,i].conj()*
+                              (psif[j1:j2,i1:i2]*psi1[l1:l2,k1:k2]*cnorm).flatten()).real
+
+  if flag_reshape:
+    out = np.pad(out,((1,0),(1,0)))
+
+  if k_target == 0:
+    return out
+  else:
+    return out, kmag
