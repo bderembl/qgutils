@@ -34,7 +34,7 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
   bf : scalar  (bottom friction coef = d_e *f0/(2*dh[-1]) with d_e the thickness 
   of the bottom Ekman layer, or bf = Ekb/(Rom*2*dh[-1]) with non dimensional params)
   forcing_z : array [ny,nx] wind forcing (exactly the same as the rhs of the PV eq.)
-  forcing_b : array [ny,nx]  =(buoyancy forcing)/N2 (entoc)
+  forcing_b : array [(nz,) ny,nx]  =(buoyancy forcing)/N2 (entoc)
   nu: scalar, harmonic viscosity. *if provided, only apply on the vorticity equation*
   nu4: scalar, biharmonic viscosity. *if provided, only apply on the vorticity equation*
   
@@ -74,7 +74,10 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
   # and the elliptic solver should have non zero BC
   # keep it as is for now because the laplacian and the solver are consistent.
   if isinstance(forcing_b,np.ndarray):
-    rhs[0,:,:] += laplacian(forcing_b, Delta)
+      if forcing_b.ndim == 2:
+          rhs[0] += laplacian(forcing_b, Delta)
+      elif forcing_b.ndim == 3:
+          rhs += laplacian(forcing_b, Delta)
 
   w = solve_mg(rhs, Delta, "w", dh, N2, f0)
 
