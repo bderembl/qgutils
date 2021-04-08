@@ -9,7 +9,7 @@ from .operators import *
 
 # 
 
-def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0, dN2dt=0):
+def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
   '''
   Solve the omega equation with surface and bottom boundary conditions
   (cf. Vallis - chap 5.4.4)
@@ -34,7 +34,7 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0, dN2dt=
   bf : scalar  (bottom friction coef = d_e *f0/(2*dh[-1]) with d_e the thickness 
   of the bottom Ekman layer, or bf = Ekb/(Rom*2*dh[-1]) with non dimensional params)
   forcing_z : array [ny,nx] wind forcing (exactly the same as the rhs of the PV eq.)
-  forcing_b : array [ny,nx]  =(buoyancy forcing)/N2 (entoc)
+  forcing_b : array [(nz,) ny,nx]  =(buoyancy forcing)/N2 (entoc)
   nu: scalar, harmonic viscosity. *if provided, only apply on the vorticity equation*
   nu4: scalar, biharmonic viscosity. *if provided, only apply on the vorticity equation*
   
@@ -48,8 +48,6 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0, dN2dt=
 
 
   N2,f0 = reshape3d(dh,N2,f0)
-  if dN2dt != 0.:
-      dN2dt,_ = reshape3d(dh,dN2dt,f0)
 
   zeta = laplacian(psi, Delta)
   b = p2b(psi,dh,f0)
@@ -61,7 +59,7 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0, dN2dt=
   del2z = laplacian(zeta, Delta)
   del4z = laplacian(del2z, Delta)
 
-  rhs = p2b(jpz - nu*del2z + nu4*del4z,dh,f0) - laplacian(jpb,Delta) - laplacian(b,Delta)*N2*dN2dt
+  rhs = p2b(jpz - nu*del2z + nu4*del4z,dh,f0) - laplacian(jpb,Delta)
   
   # boundary conditions for w
   w_bc = np.zeros_like(psi)
@@ -76,7 +74,10 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0, dN2dt=
   # and the elliptic solver should have non zero BC
   # keep it as is for now because the laplacian and the solver are consistent.
   if isinstance(forcing_b,np.ndarray):
-    rhs[0,:,:] += laplacian(forcing_b, Delta)
+      if forcing_b.ndim == 2:
+          rhs[0] += laplacian(forcing_b, Delta)
+      elif forcing_b.ndim == 3:
+          rhs += laplacian(forcing_b, Delta)
 
   w = solve_mg(rhs, Delta, "w", dh, N2, f0)
 
