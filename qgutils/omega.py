@@ -9,7 +9,7 @@ from .operators import *
 
 # 
 
-def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
+def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0, dN2dt=0):
   '''
   Solve the omega equation with surface and bottom boundary conditions
   (cf. Vallis - chap 5.4.4)
@@ -48,6 +48,8 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
 
 
   N2,f0 = reshape3d(dh,N2,f0)
+  if dN2dt != 0.:
+      dN2dt,_ = reshape3d(dh,dN2dt,f0)
 
   zeta = laplacian(psi, Delta)
   b = p2b(psi,dh,f0)
@@ -59,7 +61,7 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
   del2z = laplacian(zeta, Delta)
   del4z = laplacian(del2z, Delta)
 
-  rhs = p2b(jpz - nu*del2z + nu4*del4z,dh,f0) - laplacian(jpb,Delta)
+  rhs = p2b(jpz - nu*del2z + nu4*del4z,dh,f0) - laplacian(jpb,Delta) - laplacian(b,Delta)*N2*dN2dt
   
   # boundary conditions for w
   w_bc = np.zeros_like(psi)
