@@ -165,12 +165,17 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
   mod2lay[:,0] is the barotropic mode: should be 1..1
   mod2lay[:,i] is the ith baroclinic mode
 
-  to convert from physical to modal
-  u_mod = np.dot(lay2mod[:,:],u_lev)
-  np.einsum('ijkl,jkl->ikl',lay2mod,u_lev)
+  -To convert from physical to modal:
 
-  to go back to the physical space
+  u_mod = np.dot(lay2mod[:,:],u_lev) # if u_lev is 1D
+  u_mod = np.einsum('ij,jkl->ikl',lay2mod,u_lev) # if u_lev is 3D
+  u_mod = np.einsum('ijkl,jkl->ikl',lay2mod,u_lev) #if u_lev is 3D and N2 variable
+
+  -To go back to the physical space:
+
   u_lev = np.dot(mod2lay[:,:],u_mod)
+  u_lev = np.einsum('ij,jkl->ikl',mod2lay,u_mod) # if u_mod is 3D
+  u_lev = np.einsum('ijkl,jkl->ikl',mod2lay,u_mod) #if u_mod is 3D and N2 variable
 
   the w_modes are related to the p_modes by
   w_modes = -1/N2 d p_modes/dz
