@@ -194,7 +194,8 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   forcing_z : array [ny,nx] wind forcing (exactly the same as the rhs of the PV eq.)
               or list of files
   forcing_b : array [ny,nx]  =(buoyancy forcing)/N2 (entoc), or list of files
-              if list of files, load sst and you need to provide toc
+              if list of files and toc !=0, load sst to recompute entoc offline
+              if list of files and toc=0, then forcing_b reads entoc
   toc :  array[nz] temperature anomaly (only used for buoyancy forcing)
   nu_in_b : Bool,
             if QG equations are derived from PE there is dissip in PE (nu_in_b=True)        
@@ -235,10 +236,14 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
     if isinstance(forcing_z, list):
       loc_forcing_z = load_generic(forcing_z, it, 'wekt', rescale=f0/dh[0], interp=False, si_t=si_t)
     if isinstance(forcing_b, list):
-      sst = load_generic(forcing_b, it, 'sst', interp=False, si_t=si_t)
-      wekt = loc_forcing_z*dh[0]/f0 # remove scaling
-      entoc = -0.5*wekt*( sst - toc[0] ) /(toc[0]-toc[1])
-      loc_forcing_b = entoc - np.mean(entoc)
+      if isinstance(toc,int):
+        loc_forcing_b = load_generic(pfiles, it, 'entoc', interp=True, si_t=si_t)
+      else:
+        sst = load_generic(forcing_b, it, 'sst', interp=False, si_t=si_t)
+        wekt = loc_forcing_z*dh[0]/f0 # remove scaling
+        entoc = -0.5*wekt*( sst - toc[0] ) /(toc[0]-toc[1])
+        loc_forcing_b = entoc - np.mean(entoc)
+
 
     w = get_w(p,dh, N2[:,0,0],f0[0,0], Delta, bf,loc_forcing_z, loc_forcing_b, nu=(not nu_in_b)*nu, nu4=(not nu_in_b)*nu4)
   
@@ -300,10 +305,13 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
     if isinstance(forcing_z, list):
       loc_forcing_z = load_generic(forcing_z, it, 'wekt', f0/dh[0], interp=False, si_t=si_t)
     if isinstance(forcing_b, list):
-      sst = load_generic(forcing_b, it, 'sst', interp=False, si_t=si_t)
-      wekt = loc_forcing_z*dh[0]/f0 # remove scaling
-      entoc = -0.5*wekt*( sst - toc[0] ) /(toc[0]-toc[1])
-      loc_forcing_b = entoc - np.mean(entoc)
+      if isinstance(toc,int):
+        loc_forcing_b = load_generic(pfiles, it, 'entoc', interp=True, si_t=si_t)
+      else:
+        sst = load_generic(forcing_b, it, 'sst', interp=False, si_t=si_t)
+        wekt = loc_forcing_z*dh[0]/f0 # remove scaling
+        entoc = -0.5*wekt*( sst - toc[0] ) /(toc[0]-toc[1])
+        loc_forcing_b = entoc - np.mean(entoc)
 
     z = laplacian(p,Delta)
     b = p2b(p, dh, f0)
