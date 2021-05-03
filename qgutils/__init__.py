@@ -11,3 +11,4 @@ from .energy import *
 from .mgd2d import *
 from .inout import *
 from .omega import *
+from .variability import *
