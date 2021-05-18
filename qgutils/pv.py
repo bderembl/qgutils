@@ -301,23 +301,34 @@ def comp_modes(dh, N2, f0=1.0, eivec=False, wmode=False, diag=False):
 
 
 def project_modes(psi,l2m):
+
   nd = psi.ndim
+  nd2 = l2m.dim
   if nd == 1:
     return np.einsum('ij,j->i',l2m,psi)
   elif nd == 2:
     return np.einsum('ijk,jk->ik',l2m,psi)
   elif nd == 3:
-    return np.einsum('ijkl,jkl->ikl',l2m,psi)
+    if nd2 == 4:
+      return np.einsum('ijkl,jkl->ikl',l2m,psi)
+    else
+      return np.einsum('ij,jkl->ikl',l2m,psi)
 
 
 def project_layer(psi,m2l):
+
   nd = psi.ndim
+  nd2 = m2l.dim
   if nd == 1:
     return np.einsum('ij,j->i',m2l,psi)
   elif nd == 2:
     return np.einsum('ijk,jk->ik',m2l,psi)
   elif nd == 3:
-    return np.einsum('ijkl,jkl->ikl',m2l,psi)
+    if nd2 == 4:
+      return np.einsum('ijkl,jkl->ikl',m2l,psi)
+    else:
+      return np.einsum('ij,jkl->ikl',m2l,psi)
+
 
 
 def p2stretch(psi,dh,N2,f0):
