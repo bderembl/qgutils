@@ -311,7 +311,7 @@ def project_modes(psi,l2m):
   elif nd == 3:
     if nd2 == 4:
       return np.einsum('ijkl,jkl->ikl',l2m,psi)
-    else
+    else:
       return np.einsum('ij,jkl->ikl',l2m,psi)
 
 
