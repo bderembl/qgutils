@@ -73,18 +73,18 @@ def interp_on_c(psi):
 
 def pad_bc(psi, bc='dirichlet'):
   """
-  Pad field psi with Dirichlet or Neumann boundary conditions
+  Pad field psi with Dirichlet (default), Neumann or periodic boundary conditions
 
   Parameters
   ----------
 
-  psi : array [nz (,ny,nx)]
-  bc   : 'dirichlet' or 'neumann'
+  psi : array [ny,nx] or  [nz,ny,nx]
+  bc   : 'dirichlet', 'neumann' or 'periodic'
 
   Returns
   -------
 
-  psi_bc: array [nz (,ny+2,nx+2)]
+  psi_bc: array [ny+2,nx+2] or [nz,ny+2,nx+2]
   """
 
   nd = psi.ndim
@@ -133,6 +133,12 @@ def pad_bc(psi, bc='dirichlet'):
     psi[:,-1,0]  = psi[:,-2,1]
     psi[:,0,-1]  = psi[:,1,-2]
     psi[:,-1,-1] = psi[:,-2,-2]
+
+  elif (bc == 'periodic'):
+    psi[:,0,:]  = psi[:,-2,:]
+    psi[:,-1,:] = psi[:,1,:]
+    psi[:,:,0]  = psi[:,:,-2]
+    psi[:,:,-1] = psi[:,:,1]
 
   if nd == 2:
     return psi.squeeze()
