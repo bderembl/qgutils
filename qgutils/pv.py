@@ -384,7 +384,7 @@ def p2b(psi,dh,f0):
   Returns
   -------
 
-  b: array [nz (,ny,nx)]
+  b: array [nz-1 (,ny,nx)]
   """
   dhi = 0.5*(dh[1:] + dh[:-1])
 
@@ -401,21 +401,32 @@ def p2b(psi,dh,f0):
 
 
 def laplacian(psi, Delta, bc='dirichlet'):
+  """
+  Computes
+             d^2        d^2   
+     omega = ---- psi + ---- psi
+             dx^2       dy^2
 
-  nd = psi.ndim
-  si = psi.shape
+  with second order centered differences.
 
-  if nd == 1:
-    print("not handling 1d arrays")
-    sys.exit(1)
-  elif nd == 2: 
-    psi = psi.reshape(1,si[0],si[1])
+  Parameters
+  ----------
+
+  psi : array [(nz,) ny,nx]
+  Delta : scalar
+  bc : 'dirichlet' (default), 'neumann' or 'periodic'
+
+  Returns
+  -------
+
+  omega: array [(nz,) ny,nx]
+  """
 
   psi = pad_bc(psi, bc)
 
-  omega = (psi[:,2:,1:-1] + psi[:,:-2,1:-1] + psi[:,1:-1,2:] + psi[:,1:-1,:-2] - 4*psi[:,1:-1,1:-1])/Delta**2
+  omega = (psi[...,2:,1:-1] + psi[...,:-2,1:-1] + psi[...,1:-1,2:] + psi[...,1:-1,:-2] - 4*psi[...,1:-1,1:-1])/Delta**2
 
-  return omega.squeeze()
+  return omega
 
 
 def p2q(psi,dh,N2,f0,Delta,**kwargs):
@@ -443,7 +454,7 @@ def laplace2d(n, Delta=1, bc='dirichlet', ila2=0):
 
   n : int (number of points in x)
   Delta : scalar
-  bc : 'dirichlet or 'neumann'
+  bc : 'dirichlet' or 'neumann'
   ila2: scalar
 
   Returns
