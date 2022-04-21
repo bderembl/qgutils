@@ -130,7 +130,7 @@ def get_spec_2D(psi1, psi2, Delta, window=None):
   return k, l, spec_2D
 
 
-def get_spec_1D(psi1, psi2, Delta, window=None, all_kr= False):
+def get_spec_1D(psi1, psi2, Delta, window=None, all_kr= False, averaging='radial'):
   '''
   Compute the 1D power spectrum of the data by azimuthal integral
   of the 2D spectra
@@ -145,18 +145,61 @@ def get_spec_1D(psi1, psi2, Delta, window=None, all_kr= False):
   all_kr: bool. if False, only get radial wave number
     in the inner circle, if True, gets all wave numbers. 
     Default is False. You should only use True to check Parseval
+  averaging: 'radial' (default), or 'xy' 
 
   Returns
   -------
 
+  if averaging == 'radial'
+
   kr: array [N] radial wave number
   spec_1D: array [(nz,) N] 1d spectra
+
+  elif averaging == 'xy'
+
+  k: array [N-1] zonal wave numbers
+  l: array [N-1] meridional wave numbers
+  spec_x: array [(nz,) N-1] 1d spectra in zonal direction
+  spec_y: array [(nz,) N-1] 1d spectra in meridional direction
 
   '''
 
   k, l, spec_2D = get_spec_2D(psi1, psi2, Delta, window)
-  kr, spec_1D = azimuthal_integral(spec_2D, Delta, all_kr)
-  return kr, spec_1D
+
+  if averaging == 'radial':
+    kr, spec_1D = azimuthal_integral(spec_2D, Delta, all_kr)
+    return kr, spec_1D
+
+  elif averaging == 'xy':
+    si = psi1.shape
+    N = si[-1]
+    if all_kr == False:
+      kx = k[0,int(N/2)+1:]
+      ky = l[int(N/2)+1:,0]
+    else:
+      kx = -k[0,:int(N/2)+1][::-1]
+      ky = -l[:int(N/2)+1,0][::-1]
+      
+
+
+    dk = kx[1] - kx[0]
+    dl = ky[1] - ky[0]
+    spec_x = np.sum(spec_2D,axis=-2)*dl
+    spec_y = np.sum(spec_2D,axis=-1)*dk
+
+    if all_kr == False:
+      spec_x = spec_x[...,int(N/2)+1:] + spec_x[...,1:int(N/2)][::-1]
+      spec_y = spec_y[...,int(N/2)+1:] + spec_y[...,1:int(N/2)][::-1]
+    else:
+      spec_x[...,1:int(N/2)] += spec_x[...,int(N/2)+1:][...,::-1]
+      spec_y[...,1:int(N/2)] += spec_y[...,int(N/2)+1:][...,::-1]
+      spec_x = spec_x[...,:int(N/2)+1][...,::-1]
+      spec_y = spec_y[...,:int(N/2)+1][...,::-1]
+
+
+    return kx, ky, spec_x, spec_y
+
+
 
 
 def get_spec_flux(psi1, psi2, Delta, window=None):
