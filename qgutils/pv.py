@@ -429,9 +429,9 @@ def laplacian(psi, Delta, bc='dirichlet'):
   return omega
 
 
-def p2q(psi,dh,N2,f0,Delta,**kwargs):
+def p2q(psi,dh,N2,f0,Delta,bc='dirichlet'):
 
-  q = p2stretch(psi,dh,N2,f0) + laplacian(psi,Delta,**kwargs)
+  q = p2stretch(psi,dh,N2,f0) + laplacian(psi,Delta,bc)
 
   return q
 
