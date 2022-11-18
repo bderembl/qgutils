@@ -75,11 +75,17 @@ def pad_bc(psi, bc='dirichlet'):
   """
   Pad field psi with Dirichlet (default), Neumann or periodic boundary conditions
 
+  if psi is defined at cell centers, use 'dirichlet'
+  if psi is defined at cell nodes, use 'dirichlet_face'
+
+
+  with dirichlet: 
+
   Parameters
   ----------
 
   psi : array [ny,nx] or  [nz,ny,nx]
-  bc   : 'dirichlet', 'neumann' or 'periodic'
+  bc   : 'dirichlet', 'dirichlet_face', 'neumann' or 'periodic'
 
   Returns
   -------
@@ -97,7 +103,8 @@ def pad_bc(psi, bc='dirichlet'):
     psi = psi[None,:,:]
 
   # only pad horizontal dimensions
-  psi = np.pad(psi,((0,0),(1,1),(1,1)),'constant')
+  if bc:
+    psi = np.pad(psi,((0,0),(1,1),(1,1)),'constant')
 
   if (bc == 'dirichlet'): 
     psi[:,0,:]  = -psi[:,1,:]
@@ -111,16 +118,18 @@ def pad_bc(psi, bc='dirichlet'):
     psi[:,0,-1]  = -psi[:,1,-1]  - psi[:,0,-2]  - psi[:,1,-2]
     psi[:,-1,-1] = -psi[:,-1,-2] - psi[:,-2,-2] - psi[:,-2,-1]
 
-    # psi[:,0,:]  = 0.
-    # psi[:,-1,:] = 0.
-    # psi[:,:,0]  = 0.
-    # psi[:,:,-1] = 0.
+  elif (bc == 'dirichlet_face'): 
+
+    psi[:,0,:]  = 0.
+    psi[:,-1,:] = 0.
+    psi[:,:,0]  = 0.
+    psi[:,:,-1] = 0.
     
-    # # corners
-    # psi[:,0,0]   = 0.
-    # psi[:,-1,0]  = 0.
-    # psi[:,0,-1]  = 0.
-    # psi[:,-1,-1] = 0.
+    # corners
+    psi[:,0,0]   = 0.
+    psi[:,-1,0]  = 0.
+    psi[:,0,-1]  = 0.
+    psi[:,-1,-1] = 0.
 
   elif (bc == 'neumann'): 
     psi[:,0,:]  = psi[:,1,:]

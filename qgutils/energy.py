@@ -9,13 +9,19 @@ from .omega import *
 from .inout import *
 
 
-def comp_vel(psi, Delta, loc='center'):
+def comp_vel(psi, Delta, bc=None, loc='center'):
 
   '''
   Compute velocity at cell center or cell faces
 
   u = -d psi /dy
   v =  d psi /dx
+
+  If psi is defined at cell center then
+  **warning**
+  cell faces do not correspond to a C-grid:
+  v_f is defined at the *eas-west* faces
+  u_f is defined at the *north-south* faces
 
   Cell center vs faces:
 
@@ -27,16 +33,17 @@ def comp_vel(psi, Delta, loc='center'):
   |           |           |
   +----u_f----+----u_f----+
 
-  **warning**
-  cell faces do not correspond to a C-grid:
-  v_f is defined at the *eas-west* faces
-  u_f is defined at the *north-south* faces
+
+  If psi is defined at cell nodes then
+  cell faces correspond to a standard C-grid
+
 
   Parameters
   ----------
 
   psi : array [(nz,) ny,nx]
   Delta: float
+  bc: pad psi field with boundary conditions
   loc: 'center' or 'faces' (default center)
 
   Returns
@@ -50,9 +57,9 @@ def comp_vel(psi, Delta, loc='center'):
   v: array [nz, ny,nx(+1)]
   '''
 
-  psi_pad = pad_bc(psi)
+  psi_pad = pad_bc(psi, bc=bc)
 
-  if loc == 'center':
+  if loc == 'center' or loc == 'node':
     u = (psi_pad[...,:-2,1:-1] - psi_pad[...,2:,1:-1])/(2*Delta)
     v = (psi_pad[...,1:-1,2:] - psi_pad[...,1:-1,:-2])/(2*Delta)
   elif loc == 'faces':
