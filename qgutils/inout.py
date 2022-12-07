@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-import scipy.io.netcdf as netcdf
+from scipy.io import netcdf_file
 
 from .grid import *
 
@@ -64,9 +64,9 @@ def read_bas(fname):
   return psi.squeeze()
 
 
-def read_qgcm(fname, it, var='p', rescale=1.0, interp=True, subtract_bc=False):
+def read_nc(fname, it, var='p', rescale=1.0, interp=True, subtract_bc=False):
   """
-  Read q-gcm format file
+  Read netcdf format file
 
   Parameters
   ----------
@@ -83,7 +83,7 @@ def read_qgcm(fname, it, var='p', rescale=1.0, interp=True, subtract_bc=False):
   psi : array [nz, ny,nx]
   """
 
-  f = netcdf.netcdf_file(fname,'r')
+  f = netcdf_file(fname,'r')
   psi = f.variables[var][it,...].copy()
   f.close()
 
@@ -96,6 +96,70 @@ def read_qgcm(fname, it, var='p', rescale=1.0, interp=True, subtract_bc=False):
     psi = interp_on_c(psi)
 
   return psi
+
+
+def write_nc(fname, var, timeDim = False):
+  """
+  write netcdf format file
+
+  Parameters
+  ----------
+
+  fname: file name
+  it: int iteration number
+  var: dictionnary of variables. variables are typically 2d or 3d variables
+  timeDim: bool  add an extra time dimension (default = False)
+
+  Returns
+  -------
+
+  Nothing
+  """
+
+  f = netcdf_file(fname,'w')
+
+  # assume is the same for all fields
+  for key, psi in var.items():
+    nd = psi.ndim
+    si = psi.shape
+
+    nd0 = 0
+  if timeDim:
+    f.createDimension('t',None)
+  if nd > 2:
+    f.createDimension('z',si[0])
+    nd0 += 1
+  f.createDimension('y',si[nd0])
+  f.createDimension('x',si[nd0+1])
+
+  alldims = ()
+  if timeDim:
+    tpo = f.createVariable('t', 'f', ('t',))
+    alldims += ('t',)
+  if nd > 2:
+    zpo = f.createVariable('z', 'f', ('z',))
+    alldims += ('z',)
+  ypo = f.createVariable('y', 'f', ('y',))
+  xpo = f.createVariable('x', 'f', ('x',))
+  alldims += ('y', 'x',)
+
+  varout = {}
+  for key, psi in var.items():
+    varout[key] = f.createVariable(key , 'f', alldims)
+
+  if nd > 2:
+    zpo[:] = np.arange(si[0])
+  ypo[:] = np.arange(si[nd0])
+  xpo[:] = np.arange(si[nd0+1])
+
+  for key, psi in var.items():
+    if timeDim:
+      varout[key][0] = psi
+      tpo[0] = 0
+    else:
+      varout[key][:] = psi
+
+  f.close()
 
 
 def read_time(pfiles):

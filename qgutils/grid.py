@@ -204,21 +204,39 @@ def refine(psi, n=1, bc='dirichlet'):
   """
 
   nd = psi.ndim
+  si = psi.shape
+
   if nd == 2:
     psi = psi[None,:,:]
 
-  a=0.5625; b=0.1875; c= 0.0625
-  for i in range(0,n):
-    si = psi.shape
-    psi_f = np.zeros((si[0], 2*si[1], 2*si[2]))
+  if si[-1] % 2 == 0: # centered field
+    a = 0.5625; b = 0.1875; c = 0.0625
+    for i in range(0,n):
+      si = psi.shape
+      psi_f = np.zeros((si[0], 2*si[1], 2*si[2]))
 
-    psi = pad_bc(psi ,bc)
-    psi_f[:,::2,::2]   = (a*psi[:,1:-1,1:-1] + b*(psi[:,:-2,1:-1] + psi[:,1:-1,:-2]) + c*psi[:,:-2,:-2])
-    psi_f[:,1::2,::2]  = (a*psi[:,1:-1,1:-1] + b*(psi[:,2: ,1:-1] + psi[:,1:-1,:-2]) + c*psi[:,2: ,:-2])
-    psi_f[:,::2,1::2]  = (a*psi[:,1:-1,1:-1] + b*(psi[:,:-2,1:-1] + psi[:,1:-1, 2:]) + c*psi[:,:-2,2:])
-    psi_f[:,1::2,1::2] = (a*psi[:,1:-1,1:-1] + b*(psi[:,2: ,1:-1] + psi[:,1:-1, 2:]) + c*psi[:,2: ,2:])
+      psi = pad_bc(psi ,bc)
+      psi_f[:,::2,::2]   = (a*psi[:,1:-1,1:-1] + b*(psi[:,:-2,1:-1] + psi[:,1:-1,:-2]) + c*psi[:,:-2,:-2])
+      psi_f[:,1::2,::2]  = (a*psi[:,1:-1,1:-1] + b*(psi[:,2: ,1:-1] + psi[:,1:-1,:-2]) + c*psi[:,2: ,:-2])
+      psi_f[:,::2,1::2]  = (a*psi[:,1:-1,1:-1] + b*(psi[:,:-2,1:-1] + psi[:,1:-1, 2:]) + c*psi[:,:-2,2:])
+      psi_f[:,1::2,1::2] = (a*psi[:,1:-1,1:-1] + b*(psi[:,2: ,1:-1] + psi[:,1:-1, 2:]) + c*psi[:,2: ,2:])
+      
+      psi = psi_f
 
-    psi = psi_f
+  else: # vertex field
+
+    for i in range(0,n):
+      si = psi.shape
+      psi_f = np.zeros((si[0], 2*(si[1]-1)+1, 2*(si[2]-1)+1))
+
+      # keep same BC as original field
+      psi_f[:,::2, ::2] = psi[:,:,:]
+      psi_f[:,1::2, 1::2] = 0.25*(psi[:,:-1,:-1] + psi[:,1:,:-1] + psi[:,:-1,1:] + psi[:,1:,1:])
+      psi_f[:,::2, 1::2] = 0.5*(psi[:,:,:-1] + psi[:,:,1:])
+      psi_f[:, 1::2, ::2] = 0.5*(psi[:,:-1,:] + psi[:,1:,:])
+      
+      psi = psi_f
+
 
   if nd == 2:
     psi = np.squeeze(psi,0)
