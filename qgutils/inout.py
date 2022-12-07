@@ -64,7 +64,7 @@ def read_bas(fname):
   return psi.squeeze()
 
 
-def read_nc(fname, it, var='p', rescale=1.0, interp=True, subtract_bc=False):
+def read_nc(fname, it, var='p', rescale=1.0, interp=False, subtract_bc=False):
   """
   Read netcdf format file
 
@@ -75,7 +75,7 @@ def read_nc(fname, it, var='p', rescale=1.0, interp=True, subtract_bc=False):
   it: int iteration number
   var: str, variable name (optional)
   rescale: float, multiply output by rescale factor
-  interp: Bool, interpolate on grid center (default: True)
+  interp: Bool, interpolate on grid center (default: False) (changed default 7/12/22)
 
   Returns
   -------
