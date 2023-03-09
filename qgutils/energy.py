@@ -238,6 +238,8 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
 
   n_me = 1
   for it in range(0,si_t):
+
+    print("Loop 1/2, file", pfiles[0], it, "/", si_t, end="\r")
   
     p = load_generic(pfiles, it, 'p', rescale=1/f0, interp=True, si_t=si_t, subtract_bc=True)
     if isinstance(forcing_z, list):
@@ -307,7 +309,8 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   ei_diab     = np.zeros(si_t)
   
   for it in range(0,si_t):
-    
+    print("Loop 2/2, file", pfiles[0], it, "/", si_t, end="\r")
+
     p = load_generic(pfiles, it, 'p', 1/f0, interp=True, si_t=si_t, subtract_bc=True)
     if isinstance(forcing_z, list):
       loc_forcing_z = load_generic(forcing_z, it, 'wekt', f0/dh[0], interp=False, si_t=si_t)
@@ -397,6 +400,8 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
     lec["f2epe"]   = 0
 
   lec["average"] = average
+
+  print("Done\n")
 
   return lec
 

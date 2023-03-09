@@ -180,7 +180,7 @@ def read_time(pfiles):
   if pfiles[0][-4:] == '.bas':
     si_t = len(pfiles)
   else:
-    f = netcdf.netcdf_file(pfiles[0],'r')
+    f = netcdf_file(pfiles[0],'r')
     time = f.variables['time'][:].copy()
     f.close()
     si_t = int(len(time)*len(pfiles))
@@ -214,6 +214,6 @@ def load_generic(pfiles, it, var='p', rescale=1, interp=False, si_t=1, subtract_
     it_per_file = int(si_t/len(pfiles))
     ifi = int(it/it_per_file)
     it1 = int(it - ifi*it_per_file)
-    p = read_qgcm(pfiles[ifi], it1, var, rescale, interp, subtract_bc)
+    p = read_nc(pfiles[ifi], it1, var, rescale, interp, subtract_bc)
 
   return p
