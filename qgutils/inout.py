@@ -164,7 +164,7 @@ def write_nc(fname, var, timeDim = False):
 
 def read_time(pfiles):
   """
-  Check number of time stemps
+  Check number of time steps
 
   Parameters
   ----------

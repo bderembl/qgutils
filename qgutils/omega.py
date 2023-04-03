@@ -9,7 +9,7 @@ from .operators import *
 
 # 
 
-def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
+def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0, bc_fac=0):
   '''
   Solve the omega equation with surface and bottom boundary conditions
   (cf. Vallis - chap 5.4.4)
@@ -37,7 +37,8 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
   forcing_b : array [(nz,) ny,nx]  =(buoyancy forcing)/N2 (entoc)
   nu: scalar, harmonic viscosity. *if provided, only apply on the vorticity equation*
   nu4: scalar, biharmonic viscosity. *if provided, only apply on the vorticity equation*
-  
+  bc_fac: scalar (only used if psi is a node field) 0 for free slip or 1 for no slip 
+
 
   Returns
   -------
@@ -46,18 +47,19 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
 
   '''  
 
+  f_type = field_type(psi)
 
   N2,f0 = reshape3d(dh,N2,f0)
 
-  zeta = laplacian(psi, Delta)
+  zeta = laplacian(psi, Delta, bc_fac=bc_fac)
   b = p2b(psi,dh,f0)
   psi_b = interp_on_b(psi, dh)
 
   jpz = jacobian(psi, zeta, Delta)
   jpb = jacobian(psi_b, b, Delta)
   
-  del2z = laplacian(zeta, Delta)
-  del4z = laplacian(del2z, Delta)
+  del2z = laplacian(zeta, Delta, bc_fac=bc_fac)
+  del4z = laplacian(del2z, Delta, bc_fac=bc_fac)
 
   rhs = p2b(jpz - nu*del2z + nu4*del4z,dh,f0) - laplacian(jpb,Delta)
   
@@ -78,6 +80,12 @@ def get_w(psi,dh,N2,f0,Delta,bf=0, forcing_z=0, forcing_b=0, nu=0, nu4=0):
           rhs[0] += laplacian(forcing_b, Delta)
       elif forcing_b.ndim == 3:
           rhs += laplacian(forcing_b, Delta)
+
+  if f_type == 'node':
+    rhs[...,0,:]  = 0.
+    rhs[...,-1,:] = 0.
+    rhs[...,:,0]  = 0.
+    rhs[...,:,-1] = 0.
 
   w = solve_mg(rhs, Delta, "w", dh, N2, f0)
 

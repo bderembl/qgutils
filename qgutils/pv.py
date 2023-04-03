@@ -400,7 +400,7 @@ def p2b(psi,dh,f0):
   return b.squeeze()
 
 
-def laplacian(psi, Delta, bc='dirichlet'):
+def laplacian(psi, Delta, bc='dirichlet', bc_fac=0):
   """
   Computes
              d^2        d^2   
@@ -415,6 +415,7 @@ def laplacian(psi, Delta, bc='dirichlet'):
   psi : array [(nz,) ny,nx]
   Delta : scalar
   bc : 'dirichlet' (default), 'neumann' or 'periodic'
+  bc_fac: scalar (only used if psi is a node field) 0 for free slip or 1 for no slip 
 
   Returns
   -------
@@ -422,12 +423,20 @@ def laplacian(psi, Delta, bc='dirichlet'):
   omega: array [(nz,) ny,nx]
   """
 
-  psi = pad_bc(psi, bc)
+  f_type = field_type(psi)
 
-  omega = (psi[...,2:,1:-1] + psi[...,:-2,1:-1] + psi[...,1:-1,2:] + psi[...,1:-1,:-2] - 4*psi[...,1:-1,1:-1])/Delta**2
+  psip = pad_bc(psi, bc)
+
+  omega = (psip[...,2:,1:-1] + psip[...,:-2,1:-1] + psip[...,1:-1,2:] + psip[...,1:-1,:-2] - 4*psip[...,1:-1,1:-1])/Delta**2
+
+  # compute vorticity at the boundary with the prescribed BC
+  if f_type == 'node':
+    omega[...,0,:]  = 2*bc_fac/Delta**2*(psi[...,1,:]  - psi[...,0,:])
+    omega[...,-1,:] = 2*bc_fac/Delta**2*(psi[...,-2,:] - psi[...,-1,:])
+    omega[...,:,0]  = 2*bc_fac/Delta**2*(psi[...,:,1]  - psi[...,:,0])
+    omega[...,:,-1] = 2*bc_fac/Delta**2*(psi[...,:,-2] - psi[...,:,-1])
 
   return omega
-
 
 def p2q(psi,dh,N2,f0,Delta,bc='dirichlet'):
 

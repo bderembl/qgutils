@@ -51,6 +51,33 @@ def reshape3d(dh,N2, f0=1, **kwargs):
     return N2, f0
 
 
+def field_type(psi):
+  """
+  Check if psi field is defined at cell center or cell node.
+
+  We assume that if Nx (number of grid point in x) is even then
+  the field is cell centered. 
+  
+
+  Parameters
+  ----------
+
+  psi : array [(nz), ny,nx]
+
+  Returns
+  -------
+
+  'center' or 'node'
+  """
+
+  si = psi.shape
+  N = si[-1]
+  if N % 2 == 0:
+    return 'center'
+  else:
+    return 'node'
+    
+
 # Horizontal grid functions
 def interp_on_c(psi):
   """
@@ -149,6 +176,9 @@ def pad_bc(psi, bc='dirichlet'):
     psi[:,:,0]  = psi[:,:,-2]
     psi[:,:,-1] = psi[:,:,1]
 
+  else:
+    print("Boundary condition " + bc + "not implemented\n")
+
   if nd == 2:
     return psi.squeeze()
   else:
@@ -173,11 +203,25 @@ def coarsen(psi,n=1):
   """
 
   nd = psi.ndim
+  si = psi.shape
+
   if nd == 2:
     psi = psi[None,:,:]
 
   for i in range(0,n):
-    psi = 0.25*(psi[:,::2,::2] + psi[:,1::2,::2] + psi[:,::2,1::2] + psi[:,1::2,1::2])  
+    if si[-1] % 2 == 0: # centered field
+      psi = 0.25*(psi[:,::2,::2] + psi[:,1::2,::2] + psi[:,::2,1::2] + psi[:,1::2,1::2])  
+
+    else: # vertex field
+      psi[:,1:-1,1:-1] = (0.25*psi[:,2:-2:2,2:-2:2] +
+                          0.125*(psi[:,1:-3:2,2:-2:2] +
+                                 psi[:,3:-1:2,2:-2:2] +
+                                 psi[:,2:-2:2,1:-3:2] +
+                                 psi[:,2:-2:2,3:-1:2]) + 
+                          0.0625*(psi[:,1:-3:2,1:-3:2] + 
+                                  psi[:,1:-3:2,3:-1:2] +
+                                  psi[:,3:-1:2,1:-3:2] +
+                                  psi[:,3:-1:2,3:-1:2]))
 
   if nd == 2:
     psi = np.squeeze(psi,0)

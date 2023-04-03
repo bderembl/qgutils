@@ -14,7 +14,7 @@ from scipy.linalg import solve_banded
 from .grid import *
 from .pv import *
 
-def Jacrelax_2d(level,u,f, L0, Smat, iters=1,pre=False):
+def Jacrelax_2d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
   '''
   under-relaxed Jacobi method smoothing
   '''
@@ -22,48 +22,71 @@ def Jacrelax_2d(level,u,f, L0, Smat, iters=1,pre=False):
   si = u.shape
   nx = ny = (si[-1]-2)
 
-  dx = L0/nx; dy = L0/ny
+  if f_type == 'center': # centered field
+    dx = L0/nx; dy = L0/ny
+  else: # nodal field
+    dx = L0/(nx+1); dy = L0/(ny+1)
+
   Ax = 1.0/dx**2; Ay = 1.0/dy**2
   Ap = 1.0/(2.0*(Ax+Ay))
 
   #Dirichlet BC
-  u[:, 0,:] = -u[:, 1,:]
-  u[:,-1,:] = -u[:,-2,:]
-  u[:,:, 0] = -u[:,:, 1]
-  u[:,:,-1] = -u[:,:,-2]
+  if f_type == 'center': # centered field
+    u[:, 0,:] = -u[:, 1,:]
+    u[:,-1,:] = -u[:,-2,:]
+    u[:,:, 0] = -u[:,:, 1]
+    u[:,:,-1] = -u[:,:,-2]
+  else: # nodal field
+    u[:, 0,:] = 0.
+    u[:,-1,:] = 0.
+    u[:,:, 0] = 0.
+    u[:,:,-1] = 0.
 
   #if it is a pre-sweep, u is fully zero (on the finest grid depends on BC, always true on coarse grids)
   # we can save some calculation, if doing only one iteration, which is typically the case.
   if(pre and level>1):
     u[:,1:nx+1,1:ny+1] = -Ap*f[:,1:nx+1,1:ny+1]
     #Dirichlet BC
-    u[:, 0,:] = -u[:, 1,:]
-    u[:,-1,:] = -u[:,-2,:]
-    u[:,:, 0] = -u[:,:, 1]
-    u[:,:,-1] = -u[:,:,-2]
-    iters=iters-1
+    if f_type == 'center': # centered field
+      u[:, 0,:] = -u[:, 1,:]
+      u[:,-1,:] = -u[:,-2,:]
+      u[:,:, 0] = -u[:,:, 1]
+      u[:,:,-1] = -u[:,:,-2]
+    else:  # nodal field
+      u[:, 0,:] = 0.
+      u[:,-1,:] = 0.
+      u[:,:, 0] = 0.
+      u[:,:,-1] = 0.
+
+    iters = iters - 1
 
   for it in range(iters):
     u[:,1:nx+1,1:ny+1] = Ap*(Ax*(u[:,2:nx+2,1:ny+1] + u[:,0:nx,1:ny+1])
                          + Ay*(u[:,1:nx+1,2:ny+2] + u[:,1:nx+1,0:ny])
                          - f[:,1:nx+1,1:ny+1])
     #Dirichlet BC
-    u[:, 0,:] = -u[:, 1,:]
-    u[:,-1,:] = -u[:,-2,:]
-    u[:,:, 0] = -u[:,:, 1]
-    u[:,:,-1] = -u[:,:,-2]
+    if f_type == 'center': # centered field
+      u[:, 0,:] = -u[:, 1,:]
+      u[:,-1,:] = -u[:,-2,:]
+      u[:,:, 0] = -u[:,:, 1]
+      u[:,:,-1] = -u[:,:,-2]
+    else: # nodal field
+      u[:, 0,:] = 0.
+      u[:,-1,:] = 0.
+      u[:,:, 0] = 0.
+      u[:,:,-1] = 0.
 
 #  if(not pre):
 #    return u,None
 
-  res=np.zeros_like(u)
-  res[:,1:nx+1,1:ny+1]=f[:,1:nx+1,1:ny+1]-(( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
+  res = np.zeros_like(u)
+  res[:,1:nx+1,1:ny+1] = f[:,1:nx+1,1:ny+1]-(( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
                                        + Ay*(u[:,1:nx+1,2:ny+2]+u[:,1:nx+1,0:ny])
                                        - 2.0*(Ax+Ay)*u[:,1:nx+1,1:ny+1]))
   return u,res
 
 
-def Jacrelax_3d(level,u,f, L0, Smat, iters=1,pre=False):
+def Jacrelax_3d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
   '''
   under-relaxed Jacobi method smoothing
   '''
@@ -74,27 +97,44 @@ def Jacrelax_3d(level,u,f, L0, Smat, iters=1,pre=False):
 
   Sl = np.copy(Smat)
 
-  dx = L0/nx; dy = L0/ny
+  if f_type == 'center': # centered field
+    dx = L0/nx; dy = L0/ny
+  else: # nodal field
+    dx = L0/(nx+1); dy = L0/(ny+1)
+
   Ax = 1.0/dx**2; Ay = 1.0/dy**2
   Ap = 1.0/(2.0*(Ax+Ay))
   iAp = 2.0*(Ax+Ay)
   Sl[1,:,:,:] -= iAp
 
   #Dirichlet BC
-  u[:, 0,:] = -u[:, 1,:]
-  u[:,-1,:] = -u[:,-2,:]
-  u[:,:, 0] = -u[:,:, 1]
-  u[:,:,-1] = -u[:,:,-2]
+  if f_type == 'center': # centered field
+    u[:, 0,:] = -u[:, 1,:]
+    u[:,-1,:] = -u[:,-2,:]
+    u[:,:, 0] = -u[:,:, 1]
+    u[:,:,-1] = -u[:,:,-2]
+  else: # nodal field
+    u[:, 0,:] = 0.
+    u[:,-1,:] = 0.
+    u[:,:, 0] = 0.
+    u[:,:,-1] = 0.
 
   #if it is a pre-sweep, u is fully zero (on the finest grid depends on BC, always true on coarse grids)
   # we can save some calculation, if doing only one iteration, which is typically the case.
   if(pre and level>1):
     u[:,1:nx+1,1:ny+1] = f[:,1:nx+1,1:ny+1]/Sl[1,:,:,:]
     #Dirichlet BC
-    u[:, 0,:] = -u[:, 1,:]
-    u[:,-1,:] = -u[:,-2,:]
-    u[:,:, 0] = -u[:,:, 1]
-    u[:,:,-1] = -u[:,:,-2]
+    if f_type == 'center': # centered field
+      u[:, 0,:] = -u[:, 1,:]
+      u[:,-1,:] = -u[:,-2,:]
+      u[:,:, 0] = -u[:,:, 1]
+      u[:,:,-1] = -u[:,:,-2]
+    else: # nodal field
+      u[:, 0,:] = 0.
+      u[:,-1,:] = 0.
+      u[:,:, 0] = 0.
+      u[:,:,-1] = 0.
+
     iters=iters-1
 
   for it in range(iters):
@@ -105,10 +145,16 @@ def Jacrelax_3d(level,u,f, L0, Smat, iters=1,pre=False):
     u[:,1:nx+1,1:ny+1] = np.reshape(solve_banded((1,1), Sl[:,:,0,0], np.reshape(rhs,(nl,nx*ny))),(nl,nx,ny))
 
     #Dirichlet BC
-    u[:, 0,:] = -u[:, 1,:]
-    u[:,-1,:] = -u[:,-2,:]
-    u[:,:, 0] = -u[:,:, 1]
-    u[:,:,-1] = -u[:,:,-2]
+    if f_type == 'center': # centered field
+      u[:, 0,:] = -u[:, 1,:]
+      u[:,-1,:] = -u[:,-2,:]
+      u[:,:, 0] = -u[:,:, 1]
+      u[:,:,-1] = -u[:,:,-2]
+    else: # nodal field
+      u[:, 0,:] = 0.
+      u[:,-1,:] = 0.
+      u[:,:, 0] = 0.
+      u[:,:,-1] = 0.
 
 #  if(not pre):
 #    return u,None
@@ -124,108 +170,134 @@ def Jacrelax_3d(level,u,f, L0, Smat, iters=1,pre=False):
   return u,res
 
 
-def restrict(v):
+def restrict(v, f_type):
   '''
   restrict 'v' to the coarser grid
   '''
   si = v.shape
   nl = si[0]
-  nx = ny = (si[-1]-2)//2
-  v_c=np.zeros([nl,nx+2,ny+2])
 
-#  #vectorized form of 
-#  for i in range(1,nx+1):
-#    for j in range(1,ny+1):
-#      v_c[i,j]=0.25*(v[2*i-1,2*j-1]+v[2*i,2*j-1]+v[2*i-1,2*j]+v[2*i,2*j])
+  if f_type == 'center': # centered field
+    nx = ny = (si[-1]-2)//2
+    v_c=np.zeros([nl,nx+2,ny+2])
+
+  #  #vectorized form of 
+  #  for i in range(1,nx+1):
+  #    for j in range(1,ny+1):
+  #      v_c[i,j]=0.25*(v[2*i-1,2*j-1]+v[2*i,2*j-1]+v[2*i-1,2*j]+v[2*i,2*j])
   
-  v_c[:,1:nx+1,1:ny+1]=0.25*(v[:,1:2*nx:2,1:2*ny:2]+v[:,1:2*nx:2,2:2*ny+1:2]+v[:,2:2*nx+1:2,1:2*ny:2]+v[:,2:2*nx+1:2,2:2*ny+1:2])
+    v_c[:,1:nx+1,1:ny+1]=0.25*(v[:,1:2*nx:2,1:2*ny:2]+v[:,1:2*nx:2,2:2*ny+1:2]+v[:,2:2*nx+1:2,1:2*ny:2]+v[:,2:2*nx+1:2,2:2*ny+1:2])
+
+  else: # nodal field
+    nx = ny = (si[-1]-1)//2
+    v_c = np.zeros([nl,nx+1,ny+1])
+    
+    v_c[:,1:-1,1:-1] = (0.25*v[:,2:-2:2,2:-2:2] +
+                        0.125*(v[:,1:-3:2,2:-2:2] +
+                               v[:,3:-1:2,2:-2:2] +
+                               v[:,2:-2:2,1:-3:2] +
+                               v[:,2:-2:2,3:-1:2]) + 
+                        0.0625*(v[:,1:-3:2,1:-3:2] + 
+                                v[:,1:-3:2,3:-1:2] +
+                                v[:,3:-1:2,1:-3:2] +
+                                v[:,3:-1:2,3:-1:2]))
 
   return v_c
 
-
-
-def prolong(v):
+def prolong(v, f_type):
   '''
   interpolate 'v' to the fine grid
   '''
   si = v.shape
   nl = si[0]
-  nx = ny = (si[-1]-2)
+  if f_type == 'center': # centered field
 
-  v_f=np.zeros([nl,2*nx+2,2*ny+2])
-
-#  #vectorized form of 
-#  for i in range(1,nx+1):
-#    for j in range(1,ny+1):
-#      v_f[2*i-1,2*j-1] = 0.5625*v[i,j]+0.1875*(v[i-1,j]+v[i,j-1])+0.0625*v[i-1,j-1]
-#      v_f[2*i  ,2*j-1] = 0.5625*v[i,j]+0.1875*(v[i+1,j]+v[i,j-1])+0.0625*v[i+1,j-1]
-#      v_f[2*i-1,2*j  ] = 0.5625*v[i,j]+0.1875*(v[i-1,j]+v[i,j+1])+0.0625*v[i-1,j+1]
-#      v_f[2*i  ,2*j  ] = 0.5625*v[i,j]+0.1875*(v[i+1,j]+v[i,j+1])+0.0625*v[i+1,j+1]
-
-  a=0.5625; b=0.1875; c= 0.0625
-
-  v_f[:,1:2*nx:2  ,1:2*ny:2  ] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,0:nx  ,1:ny+1]+v[:,1:nx+1,0:ny]  )+c*v[:,0:nx  ,0:ny  ]
-  v_f[:,2:2*nx+1:2,1:2*ny:2  ] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,2:nx+2,1:ny+1]+v[:,1:nx+1,0:ny]  )+c*v[:,2:nx+2,0:ny  ]
-  v_f[:,1:2*nx:2  ,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,0:nx  ,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,0:nx  ,2:ny+2]
-  v_f[:,2:2*nx+1:2,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,2:nx+2,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,2:nx+2,2:ny+2]
-
+    nx = ny = (si[-1]-2)
+  
+    v_f=np.zeros([nl,2*nx+2,2*ny+2])
+  
+  #  #vectorized form of 
+  #  for i in range(1,nx+1):
+  #    for j in range(1,ny+1):
+  #      v_f[2*i-1,2*j-1] = 0.5625*v[i,j]+0.1875*(v[i-1,j]+v[i,j-1])+0.0625*v[i-1,j-1]
+  #      v_f[2*i  ,2*j-1] = 0.5625*v[i,j]+0.1875*(v[i+1,j]+v[i,j-1])+0.0625*v[i+1,j-1]
+  #      v_f[2*i-1,2*j  ] = 0.5625*v[i,j]+0.1875*(v[i-1,j]+v[i,j+1])+0.0625*v[i-1,j+1]
+  #      v_f[2*i  ,2*j  ] = 0.5625*v[i,j]+0.1875*(v[i+1,j]+v[i,j+1])+0.0625*v[i+1,j+1]
+  
+    a=0.5625; b=0.1875; c= 0.0625
+  
+    v_f[:,1:2*nx:2  ,1:2*ny:2  ] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,0:nx  ,1:ny+1]+v[:,1:nx+1,0:ny]  )+c*v[:,0:nx  ,0:ny  ]
+    v_f[:,2:2*nx+1:2,1:2*ny:2  ] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,2:nx+2,1:ny+1]+v[:,1:nx+1,0:ny]  )+c*v[:,2:nx+2,0:ny  ]
+    v_f[:,1:2*nx:2  ,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,0:nx  ,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,0:nx  ,2:ny+2]
+    v_f[:,2:2*nx+1:2,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,2:nx+2,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,2:nx+2,2:ny+2]
+  else: # nodal field
+    nx = ny = (si[-1]-1)
+  
+    v_f = np.zeros([nl,2*nx+1,2*ny+1])
+  
+    v_f[:,2:-2:2,2:-2:2] = v[:,1:-1,1:-1]
+    v_f[:,1:-1:2,2:-2:2] = 0.5*(v[:,:-1,1:-1] + v[:,1:,1:-1])
+    v_f[:,2:-2:2,1:-1:2] = 0.5*(v[:,1:-1,:-1] + v[:,1:-1,1:])
+    v_f[:,1:-1:2,1:-1:2] = 0.25*(v[:,1:,1:] + v[:,1:,:-1] + v[:,:-1,1:] + v[:,:-1,:-1])
+  
   return v_f
 
-def V_cycle(num_levels,u,f, L0, Jacrelax, Smat, level=1):
+
+def V_cycle(num_levels,u,f, L0, Jacrelax, Smat, f_type, level=1):
   '''
   V cycle
   '''
-  if(level==num_levels):#bottom solve
-    u,res=Jacrelax(level,u,f, L0, Smat, iters=50,pre=True)
+  if(level == num_levels):#bottom solve
+    u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=50,pre=True)
     return u,res
 
   #Step 1: Relax Au=f on this grid
-  u,res=Jacrelax(level,u,f, L0, Smat, iters=2,pre=True)
+  u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=2,pre=True)
 
   #Step 2: Restrict residual to coarse grid
   #res_c=restrict(nx//2,ny//2,res)
-  res_c=restrict(res)
+  res_c = restrict(res, f_type)
   #res_c = qg.coarsen(res[1:-1,1:-1])
   #res_c = qg.pad_bc(res_c)
 
   #Step 3:Solve A e_c=res_c on the coarse grid. (Recursively)
-  e_c=np.zeros_like(res_c)
-  e_c,res_c=V_cycle(num_levels,e_c,res_c, L0, Jacrelax, Smat, level+1)
+  e_c = np.zeros_like(res_c)
+  e_c,res_c = V_cycle(num_levels,e_c,res_c, L0, Jacrelax, Smat, f_type, level+1)
 
   #Step 4: Interpolate(prolong) e_c to fine grid and add to u
   #u+=prolong(nx//2,ny//2,e_c)
-  u+=prolong(e_c)
+  u += prolong(e_c, f_type)
   #u+= qg.pad_bc(qg.refine(e_c[1:-1,1:-1]))
   
   #Step 5: Relax Au=f on this grid
-  u,res=Jacrelax(level,u,f, L0, Smat, iters=1,pre=False)
+  u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=1,pre=False)
   return u,res
 
-def FMG(num_levels,f, L0, Jacrelax, Smat=1, nv=1,level=1):
+def FMG(num_levels,f, L0, Jacrelax, f_type, Smat=1, nv=1,level=1):
 
-  if(level==num_levels):#bottom solve
+  if(level == num_levels):#bottom solve
     #u=np.zeros([nx+2,ny+2])  
-    u=np.zeros_like(f)  
-    u,res=Jacrelax(level,u,f, L0, Smat, iters=50,pre=True)
+    u = np.zeros_like(f)  
+    u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=50,pre=True)
     return u,res
 
   #Step 1: Restrict the rhs to a coarse grid
   #f_c=restrict(nx//2,ny//2,f)
-  f_c=restrict(f)
+  f_c = restrict(f, f_type)
   #f_c = qg.coarsen(f[1:-1,1:-1])
   #f_c = qg.pad_bc(f_c)
 
   #Step 2: Solve the coarse grid problem using FMG
-  u_c,_=FMG(num_levels,f_c, L0, Jacrelax, Smat, nv,level+1)
+  u_c,_ = FMG(num_levels,f_c, L0, Jacrelax, f_type, Smat, nv,level+1)
 
   #Step 3: Interpolate u_c to the fine grid
   #u=prolong(nx//2,ny//2,u_c)
-  u=prolong(u_c)
+  u = prolong(u_c, f_type)
   #u = qg.pad_bc(qg.refine(u_c[1:-1,1:-1]))
 
   #step 4: Execute 'nv' V-cycles
   for _ in range(nv):
-    u,res=V_cycle(num_levels-level,u,f, L0, Jacrelax, Smat)
+    u,res = V_cycle(num_levels-level,u,f, L0, Jacrelax, Smat, f_type)
   return u,res
 
 # def MGVP(nx,ny,num_levels):
@@ -296,25 +368,38 @@ def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1):
   #   sys.exit(1)
 
   nl,ny,nx = np.shape(rhs)
-  nlevels = np.log2(nx) + 1
+  if nx % 2 == 0: # centered field
+    nlevels = np.log2(nx) + 1
+    L0 = nx*Delta
+    rhs_p = pad_bc(rhs)
+    f_type = 'center'
+  else: # nodal field
+    nlevels = np.log2(nx-1)
+    L0 = (nx - 1)*Delta
+    rhs_p = rhs
+    f_type = 'node'
 
-  L0 = nx*Delta
 
   nv = 2
   if select_solver == '2d':
     S = 1
-    u,res = FMG(nlevels, pad_bc(rhs), L0, Jacrelax_2d, S, nv)
+    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_2d, f_type, S, nv)
   elif select_solver == 'pv':
     S = gamma_stretch(dh, N2, f0, wmode=False, squeeze=False, mat_format='diag')
-    u,res = FMG(nlevels, pad_bc(rhs), L0, Jacrelax_3d, S, nv)
+    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_3d, f_type, S, nv)
   elif select_solver == 'w':
     S = gamma_stretch(dh, N2, f0, wmode=True, squeeze=False, mat_format='diag')
-    u,res = FMG(nlevels, pad_bc(rhs), L0, Jacrelax_3d, S, nv)
+    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_3d, f_type, S, nv)
+
+
+  if f_type == 'center': # centered field
+    u = u[:,1:-1,1:-1]
+
 
   if nd < 3:
-    return u[0,1:-1,1:-1]
+    return u[0,:,:]
   else:
-    return u[:,1:-1,1:-1]
+    return u
 
 
 

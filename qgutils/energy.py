@@ -89,13 +89,25 @@ def comp_ke(psi, Delta):
 
   '''
 
+  f_type = field_type(psi)
+
   # need to interpolate u^2 and v^2 at cell center and *not* u and v
   # So that if we compare the integral of ke and the integral of 0.5*q*p
   # we get the same answer within machine precision
-  u,v = comp_vel(psi, Delta, loc='faces')
 
-  ke = 0.25*(v[...,:,1:]**2 + v[...,:,:-1]**2 +
-             u[...,1:,:]**2 + u[...,:-1,:]**2)
+  if f_type == 'center':
+    u,v = comp_vel(psi, Delta, bc='dirichlet', loc='faces')
+
+    ke = 0.25*(v[...,:,1:]**2 + v[...,:,:-1]**2 +
+               u[...,1:,:]**2 + u[...,:-1,:]**2)
+  else:
+    # pad psi with 0 ('dirichlet_face') to get (zero) cross-boundary values for
+    # u and v. We remove this padding in the computation of ke (1:-1 indices)
+    u,v = comp_vel(psi, Delta, bc='dirichlet_face', loc='faces')
+
+    ke = 0.25*(u[...,1:-1,1:]**2 + u[...,1:-1,:-1]**2 +
+               v[...,1:,1:-1]**2 + v[...,:-1,1:-1]**2)
+
 
   return ke
 
@@ -148,6 +160,8 @@ def integral(psi, dh, Delta, average=False):
   the upper and lower boundaries
 
 
+  **if psi is a node field, we assume psi=0 at the boundary**
+
   Parameters
   ----------
 
@@ -182,7 +196,7 @@ def integral(psi, dh, Delta, average=False):
   return psi_i
 
 
-def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b=0, toc=0, nu_in_b=True, average=False):
+def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b=0, toc=0, nu_in_b=True, bc_fac=0, interp=False, average=False):
   '''
   Compute Lorenz energy cycle
 
@@ -207,6 +221,7 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   nu_in_b : Bool,
             if QG equations are derived from PE there is dissip in PE (nu_in_b=True)        
             if QG equations are derived from SW there is no thichness dissipation (nu_in_b=False)
+  bc_fac: scalar (only used if psi is a node field) 0 for free slip or 1 for no slip 
   average : Bool, if False, return energy integral (default), if True: return energy average
 
   Returns
@@ -221,7 +236,7 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
 
   si_t = read_time(pfiles)
 
-  p = load_generic(pfiles, 0, 'p', 1/f0, interp=True)
+  p = load_generic(pfiles, 0, 'p', 1/f0, interp=interp, si_t=si_t)
   nl,N,naux = p.shape
   
   if not isinstance(forcing_z, list):
@@ -241,20 +256,24 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
 
     print("Loop 1/2, file", pfiles[0], it, "/", si_t, end="\r")
   
-    p = load_generic(pfiles, it, 'p', rescale=1/f0, interp=True, si_t=si_t, subtract_bc=True)
+    p = load_generic(pfiles, it, 'p', rescale=1/f0, interp=interp, si_t=si_t, subtract_bc=True)
     if isinstance(forcing_z, list):
-      loc_forcing_z = load_generic(forcing_z, it, 'wekt', rescale=f0/dh[0], interp=False, si_t=si_t)
+      loc_forcing_z = load_generic(forcing_z, it, 'wekt', rescale=f0/dh[0], interp=(not interp), si_t=si_t)
+      if (not interp):
+        loc_forcing_z = pad_bc(loc_forcing_z, bc='neumann')
     if isinstance(forcing_b, list):
       if isinstance(toc,int):
-        loc_forcing_b = load_generic(pfiles, it, 'entoc', interp=True, si_t=si_t)
+        loc_forcing_b = load_generic(pfiles, it, 'entoc', interp=interp, si_t=si_t)
       else:
-        sst = load_generic(forcing_b, it, 'sst', interp=False, si_t=si_t)
+        sst = load_generic(forcing_b, it, 'sst', interp=(not interp), si_t=si_t)
+        if (not interp):
+          sst = pad_bc(sst, bc='neumann')
         wekt = loc_forcing_z*dh[0]/f0 # remove scaling
         entoc = -0.5*wekt*( sst - toc[0] ) /(toc[0]-toc[1])
         loc_forcing_b = entoc - np.mean(entoc)
 
 
-    w = get_w(p,dh, N2[:,0,0],f0[0,0], Delta, bf,loc_forcing_z, loc_forcing_b, nu=(not nu_in_b)*nu, nu4=(not nu_in_b)*nu4)
+    w = get_w(p,dh, N2[:,0,0],f0[0,0], Delta, bf,loc_forcing_z, loc_forcing_b, nu=(not nu_in_b)*nu, nu4=(not nu_in_b)*nu4, bc_fac=bc_fac)
   
     p_me += (p - p_me)/n_me
     w_me += (w - w_me)/n_me
@@ -262,7 +281,7 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
     d_me += (loc_forcing_b - d_me)/n_me
     n_me += 1
   
-  z_me = laplacian(p_me,Delta)
+  z_me = laplacian(p_me,Delta, bc_fac=bc_fac)
   b_me = p2b(p_me, dh, f0)
   s_me = p2stretch(p_me,dh, N2,f0)
   q_me = p2q(p_me, dh, N2,f0, Delta)
@@ -276,13 +295,13 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   e_bottom = np.zeros((nl,N,N))
   e_diab   = np.zeros((nl-1,N,N))
   
-  dissip_k_me = -nu4*laplacian(laplacian(z_me,Delta),Delta)
+  dissip_k_me = -nu4*laplacian(laplacian(z_me,Delta, bc_fac=bc_fac),Delta, bc_fac=bc_fac)
   dissip_p_me = -nu4*laplacian(laplacian(s_me,Delta),Delta)
-  dissip_k_me += nu*laplacian(z_me,Delta)
+  dissip_k_me += nu*laplacian(z_me,Delta, bc_fac=bc_fac)
   dissip_p_me += nu*laplacian(s_me,Delta)
   
   
-  bottom_ekman = -bf*laplacian(p_me[-1,:,:],Delta)
+  bottom_ekman = -bf*laplacian(p_me[-1,:,:],Delta, bc_fac=bc_fac)
   
   e_surf[0,:,:] = -p_me[0,:,:]*f_me
   e_bottom[-1,:,:] = -p_me[-1,:,:]*bottom_ekman
@@ -311,22 +330,26 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   for it in range(0,si_t):
     print("Loop 2/2, file", pfiles[0], it, "/", si_t, end="\r")
 
-    p = load_generic(pfiles, it, 'p', 1/f0, interp=True, si_t=si_t, subtract_bc=True)
+    p = load_generic(pfiles, it, 'p', 1/f0, interp=interp, si_t=si_t, subtract_bc=interp)
     if isinstance(forcing_z, list):
-      loc_forcing_z = load_generic(forcing_z, it, 'wekt', f0/dh[0], interp=False, si_t=si_t)
+      loc_forcing_z = load_generic(forcing_z, it, 'wekt', f0/dh[0], interp=(not interp), si_t=si_t)
+      if (not interp):
+        loc_forcing_z = pad_bc(loc_forcing_z, bc='neumann')
     if isinstance(forcing_b, list):
       if isinstance(toc,int):
-        loc_forcing_b = load_generic(pfiles, it, 'entoc', interp=True, si_t=si_t)
+        loc_forcing_b = load_generic(pfiles, it, 'entoc', interp=interp, si_t=si_t)
       else:
-        sst = load_generic(forcing_b, it, 'sst', interp=False, si_t=si_t)
+        sst = load_generic(forcing_b, it, 'sst', interp=(not interp), si_t=si_t)
+        if (not interp):
+          sst = pad_bc(sst, bc='neumann')
         wekt = loc_forcing_z*dh[0]/f0 # remove scaling
         entoc = -0.5*wekt*( sst - toc[0] ) /(toc[0]-toc[1])
         loc_forcing_b = entoc - np.mean(entoc)
 
-    z = laplacian(p,Delta)
+    z = laplacian(p,Delta, bc_fac=bc_fac)
     b = p2b(p, dh, f0)
     s = p2stretch(p,dh, N2,f0)
-    w = get_w(p,dh, N2[:,0,0],f0[0,0], Delta, bf,loc_forcing_z, forcing_b, nu=(not nu_in_b)*nu, nu4=(not nu_in_b)*nu4)
+    w = get_w(p,dh, N2[:,0,0],f0[0,0], Delta, bf,loc_forcing_z, forcing_b, nu=(not nu_in_b)*nu, nu4=(not nu_in_b)*nu4, bc_fac=bc_fac)
     q = p2q(p, dh, N2,f0, Delta)
     ke = comp_ke(p,Delta)
     pe = comp_pe(p, dh, N2,f0, Delta)
@@ -346,12 +369,12 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
     ke_me2ke_p = -p_me*jpz
     pe_me2pe_p = -p_me*jps
     
-    dissip_k = -nu4*laplacian(laplacian(z_p,Delta),Delta)
+    dissip_k = -nu4*laplacian(laplacian(z_p,Delta, bc_fac=bc_fac),Delta, bc_fac=bc_fac)
     dissip_p = -nu4*laplacian(laplacian(s_p,Delta),Delta)
-    dissip_k += nu*laplacian(z_p,Delta)
+    dissip_k += nu*laplacian(z_p,Delta, bc_fac=bc_fac)
     dissip_p += nu*laplacian(s_p,Delta)
 
-    bottom_ekman = -bf*laplacian(p_p[-1,:,:],Delta)
+    bottom_ekman = -bf*laplacian(p_p[-1,:,:],Delta, bc_fac=bc_fac)
   
     e_surf[0,:,:] = -p_p[0,:,:]*(loc_forcing_z - f_me)
     e_bottom[-1,:,:] = -p_p[-1,:,:]*bottom_ekman
@@ -381,8 +404,8 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   lec["mpe2epe"] = np.mean(ei_pe_me2pe_p) 
   lec["mke2dis"] = -ei_diss_k_me          
   lec["eke2dis"] = -np.mean(ei_diss_k)    
-  lec["mpe2dis"] = -ei_diss_p_me          
-  lec["epe2dis"] = -np.mean(ei_diss_p)    
+  lec["mpe2dis"] = -ei_diss_p_me          # overwritten if not nu_in_b
+  lec["epe2dis"] = -np.mean(ei_diss_p)    # overwritten if not nu_in_b
   lec["mke2bf"]  = -ei_bottom_me          
   lec["eke2bf"]  = -np.mean(ei_bottom)    
   lec["mke"]     = ei_ke_me      
