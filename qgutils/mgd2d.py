@@ -14,7 +14,7 @@ from scipy.linalg import solve_banded
 from .grid import *
 from .pv import *
 
-def Jacrelax_2d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
+def Jacrelax_2d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   '''
   under-relaxed Jacobi method smoothing
   '''
@@ -29,6 +29,9 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
 
   Ax = 1.0/dx**2; Ay = 1.0/dy**2
   Ap = 1.0/(2.0*(Ax+Ay))
+
+  if isinstance(mask,np.ndarray):
+    mask = mask[:,1:nx+1,1:ny+1]
 
   #Dirichlet BC
   if f_type == 'center': # centered field
@@ -45,7 +48,7 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
   #if it is a pre-sweep, u is fully zero (on the finest grid depends on BC, always true on coarse grids)
   # we can save some calculation, if doing only one iteration, which is typically the case.
   if(pre and level>1):
-    u[:,1:nx+1,1:ny+1] = -Ap*f[:,1:nx+1,1:ny+1]
+    u[:,1:nx+1,1:ny+1] = -Ap*f[:,1:nx+1,1:ny+1]*mask
     #Dirichlet BC
     if f_type == 'center': # centered field
       u[:, 0,:] = -u[:, 1,:]
@@ -63,7 +66,7 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
   for it in range(iters):
     u[:,1:nx+1,1:ny+1] = Ap*(Ax*(u[:,2:nx+2,1:ny+1] + u[:,0:nx,1:ny+1])
                          + Ay*(u[:,1:nx+1,2:ny+2] + u[:,1:nx+1,0:ny])
-                         - f[:,1:nx+1,1:ny+1])
+                         - f[:,1:nx+1,1:ny+1])*mask
     #Dirichlet BC
     if f_type == 'center': # centered field
       u[:, 0,:] = -u[:, 1,:]
@@ -80,13 +83,13 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
 #    return u,None
 
   res = np.zeros_like(u)
-  res[:,1:nx+1,1:ny+1] = f[:,1:nx+1,1:ny+1]-(( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
+  res[:,1:nx+1,1:ny+1] = (f[:,1:nx+1,1:ny+1]-(( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
                                        + Ay*(u[:,1:nx+1,2:ny+2]+u[:,1:nx+1,0:ny])
-                                       - 2.0*(Ax+Ay)*u[:,1:nx+1,1:ny+1]))
+                                       - 2.0*(Ax+Ay)*u[:,1:nx+1,1:ny+1])))*mask
   return u,res
 
 
-def Jacrelax_3d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
+def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   '''
   under-relaxed Jacobi method smoothing
   '''
@@ -107,6 +110,8 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
   iAp = 2.0*(Ax+Ay)
   Sl[1,:,:,:] -= iAp
 
+  if isinstance(mask,np.ndarray):
+    mask = mask[:,1:nx+1,1:ny+1]
   #Dirichlet BC
   if f_type == 'center': # centered field
     u[:, 0,:] = -u[:, 1,:]
@@ -122,7 +127,7 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
   #if it is a pre-sweep, u is fully zero (on the finest grid depends on BC, always true on coarse grids)
   # we can save some calculation, if doing only one iteration, which is typically the case.
   if(pre and level>1):
-    u[:,1:nx+1,1:ny+1] = f[:,1:nx+1,1:ny+1]/Sl[1,:,:,:]
+    u[:,1:nx+1,1:ny+1] = f[:,1:nx+1,1:ny+1]/Sl[1,:,:,:]*mask
     #Dirichlet BC
     if f_type == 'center': # centered field
       u[:, 0,:] = -u[:, 1,:]
@@ -142,7 +147,7 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
                                 + Ay*(u[:,1:nx+1,2:ny+2] + u[:,1:nx+1,0:ny]))
 
     #replace by thomas algorithm?
-    u[:,1:nx+1,1:ny+1] = np.reshape(solve_banded((1,1), Sl[:,:,0,0], np.reshape(rhs,(nl,nx*ny))),(nl,nx,ny))
+    u[:,1:nx+1,1:ny+1] = np.reshape(solve_banded((1,1), Sl[:,:,0,0], np.reshape(rhs,(nl,nx*ny))),(nl,nx,ny))*mask
 
     #Dirichlet BC
     if f_type == 'center': # centered field
@@ -160,12 +165,12 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, iters=1,pre=False):
 #    return u,None
 
   res=np.zeros_like(u)
-  res[:,1:nx+1,1:ny+1]=f[:,1:nx+1,1:ny+1]-( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
+  res[:,1:nx+1,1:ny+1]=(f[:,1:nx+1,1:ny+1]-( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
                                             + Ay*(u[:,1:nx+1,2:ny+2]+u[:,1:nx+1,0:ny])
                                             - 2.0*(Ax+Ay)*u[:,1:nx+1,1:ny+1]
                                             + Smat[1,:,:,:]*u[:,1:nx+1,1:ny+1]
                                             + np.roll(Smat[0,:,:,:]*u[:,1:nx+1,1:ny+1],-1,axis=0)
-                                            + np.roll(Smat[2,:,:,:]*u[:,1:nx+1,1:ny+1],1,axis=0))
+                                            + np.roll(Smat[2,:,:,:]*u[:,1:nx+1,1:ny+1],1,axis=0)))*mask
                                          
   return u,res
 
@@ -174,6 +179,10 @@ def restrict(v, f_type):
   '''
   restrict 'v' to the coarser grid
   '''
+
+  if not isinstance(v,np.ndarray):
+    return v
+
   si = v.shape
   nl = si[0]
 
@@ -243,16 +252,16 @@ def prolong(v, f_type):
   return v_f
 
 
-def V_cycle(num_levels,u,f, L0, Jacrelax, Smat, f_type, level=1):
+def V_cycle(num_levels,u,f, L0, Jacrelax, Smat, f_type, mask, level=1):
   '''
   V cycle
   '''
   if(level == num_levels):#bottom solve
-    u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=50,pre=True)
+    u,res = Jacrelax(level,u,f, L0, Smat, f_type, mask, iters=50,pre=True)
     return u,res
 
   #Step 1: Relax Au=f on this grid
-  u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=2,pre=True)
+  u,res = Jacrelax(level,u,f, L0, Smat, f_type, mask, iters=2,pre=True)
 
   #Step 2: Restrict residual to coarse grid
   #res_c=restrict(nx//2,ny//2,res)
@@ -260,9 +269,10 @@ def V_cycle(num_levels,u,f, L0, Jacrelax, Smat, f_type, level=1):
   #res_c = qg.coarsen(res[1:-1,1:-1])
   #res_c = qg.pad_bc(res_c)
 
+  mask_c = restrict(mask, f_type)
   #Step 3:Solve A e_c=res_c on the coarse grid. (Recursively)
   e_c = np.zeros_like(res_c)
-  e_c,res_c = V_cycle(num_levels,e_c,res_c, L0, Jacrelax, Smat, f_type, level+1)
+  e_c,res_c = V_cycle(num_levels,e_c,res_c, L0, Jacrelax, Smat, f_type, mask_c, level+1)
 
   #Step 4: Interpolate(prolong) e_c to fine grid and add to u
   #u+=prolong(nx//2,ny//2,e_c)
@@ -270,25 +280,26 @@ def V_cycle(num_levels,u,f, L0, Jacrelax, Smat, f_type, level=1):
   #u+= qg.pad_bc(qg.refine(e_c[1:-1,1:-1]))
   
   #Step 5: Relax Au=f on this grid
-  u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=1,pre=False)
+  u,res = Jacrelax(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False)
   return u,res
 
-def FMG(num_levels,f, L0, Jacrelax, f_type, Smat=1, nv=1,level=1):
+def FMG(num_levels,f, L0, Jacrelax, f_type, mask, Smat=1, nv=1,level=1):
 
   if(level == num_levels):#bottom solve
     #u=np.zeros([nx+2,ny+2])  
     u = np.zeros_like(f)  
-    u,res = Jacrelax(level,u,f, L0, Smat, f_type, iters=50,pre=True)
+    u,res = Jacrelax(level,u,f, L0, Smat, f_type, mask, iters=50,pre=True)
     return u,res
 
   #Step 1: Restrict the rhs to a coarse grid
   #f_c=restrict(nx//2,ny//2,f)
   f_c = restrict(f, f_type)
+  mask_c = restrict(mask, f_type)
   #f_c = qg.coarsen(f[1:-1,1:-1])
   #f_c = qg.pad_bc(f_c)
 
   #Step 2: Solve the coarse grid problem using FMG
-  u_c,_ = FMG(num_levels,f_c, L0, Jacrelax, f_type, Smat, nv,level+1)
+  u_c,_ = FMG(num_levels,f_c, L0, Jacrelax, f_type, mask_c, Smat, nv,level+1)
 
   #Step 3: Interpolate u_c to the fine grid
   #u=prolong(nx//2,ny//2,u_c)
@@ -297,7 +308,7 @@ def FMG(num_levels,f, L0, Jacrelax, f_type, Smat=1, nv=1,level=1):
 
   #step 4: Execute 'nv' V-cycles
   for _ in range(nv):
-    u,res = V_cycle(num_levels-level,u,f, L0, Jacrelax, Smat, f_type)
+    u,res = V_cycle(num_levels-level,u,f, L0, Jacrelax, Smat, f_type, mask)
   return u,res
 
 # def MGVP(nx,ny,num_levels):
@@ -351,7 +362,7 @@ def FMG(num_levels,f, L0, Jacrelax, f_type, Smat=1, nv=1,level=1):
 
 
 
-def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1):
+def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1, mask=1):
   '''
   wrap multigrid
   L0 is the total length of the domain
@@ -380,16 +391,20 @@ def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1):
     f_type = 'node'
 
 
+  if isinstance(mask,np.ndarray):
+    mask = mask[None,:,:]
+
+
   nv = 2
   if select_solver == '2d':
     S = 1
-    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_2d, f_type, S, nv)
+    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_2d, f_type, mask, S, nv)
   elif select_solver == 'pv':
     S = gamma_stretch(dh, N2, f0, wmode=False, squeeze=False, mat_format='diag')
-    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_3d, f_type, S, nv)
+    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_3d, f_type, mask, S, nv)
   elif select_solver == 'w':
     S = gamma_stretch(dh, N2, f0, wmode=True, squeeze=False, mat_format='diag')
-    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_3d, f_type, S, nv)
+    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_3d, f_type, mask, S, nv)
 
 
   if f_type == 'center': # centered field
