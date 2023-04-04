@@ -254,7 +254,7 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   n_me = 1
   for it in range(0,si_t):
 
-    print("Loop 1/2, iter " it, "/", si_t-1, end="\r")
+    print("Loop 1/2, iter ", it, "/", si_t-1, end="\r")
   
     p = load_generic(pfiles, it, 'p', rescale=1/f0, interp=interp, si_t=si_t, subtract_bc=True)
     if isinstance(forcing_z, list):
@@ -328,7 +328,7 @@ def lorenz_cycle(pfiles,dh,N2,f0,Delta,bf=0, nu=0, nu4=0, forcing_z=0, forcing_b
   ei_diab     = np.zeros(si_t)
   
   for it in range(0,si_t):
-    print("Loop 2/2, iter " it, "/", si_t-1, end="\r")
+    print("Loop 2/2, iter ", it, "/", si_t-1, end="\r")
 
     p = load_generic(pfiles, it, 'p', 1/f0, interp=interp, si_t=si_t, subtract_bc=interp)
     if isinstance(forcing_z, list):
