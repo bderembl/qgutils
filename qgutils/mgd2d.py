@@ -364,9 +364,48 @@ def FMG(num_levels,f, L0, Jacrelax, f_type, mask, Smat=1, nv=1,level=1):
 
 def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1, mask=1):
   '''
-  wrap multigrid
-  L0 is the total length of the domain
+  Generic function for Poisson or Laplace equation
+
+  Parameters
+  ----------
+
+  rhs : array [(nz,) ny,nx]
+  Delta: float
+  select_solver: str '2d' or 'pv' or 'w'
+  dh : array [nz] 
+  N2 : array [nz (,ny,nx)]
+  f0 : scalar or array [ny,nx]
+  mask : array [ny,nx]
+
+  Returns
+  -------
+
+  Solution psi of the selected equation:
+
+  '2d':
+
+       d^2        d^2      
+       ---- psi + ---- psi = rhs
+       dx^2       dy^2     
+
+  'pv':
+
+       d^2        d^2        d  ( f^2  d     ) 
+       ---- psi + ---- psi + -- ( ---  -- psi) = rhs
+       dx^2       dy^2       dz ( N^2  dz    ) 
+
+
+  'w':
+
+       d^2        d^2        f^2 d^2  
+       ---- psi + ---- psi + --- ----  psi = rhs
+       dx^2       dy^2       N^2 dz^2 
+
   '''
+
+
+  #  L0 is the total length of the domain
+  # do not change this
 
   nd = rhs.ndim
   
