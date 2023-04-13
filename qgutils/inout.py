@@ -118,36 +118,45 @@ def write_nc(fname, var, timeDim = False):
 
   f = netcdf_file(fname,'w')
 
-  # assume is the same for all fields
+  ndmax = 0
   for key, psi in var.items():
     nd = psi.ndim
-    si = psi.shape
+    ndmax = np.max((nd,ndmax))
+    if nd == ndmax:
+      si = psi.shape
 
-    nd0 = 0
+  nd0 = 0
   if timeDim:
     f.createDimension('t',None)
-  if nd > 2:
+  if ndmax > 2:
     f.createDimension('z',si[0])
     nd0 += 1
   f.createDimension('y',si[nd0])
   f.createDimension('x',si[nd0+1])
 
-  alldims = ()
+  alldims_2d = ()
+  alldims_3d = ()
   if timeDim:
     tpo = f.createVariable('t', 'f', ('t',))
-    alldims += ('t',)
-  if nd > 2:
+    alldims_2d += ('t',)
+    alldims_3d += ('t',)
+  if ndmax > 2:
     zpo = f.createVariable('z', 'f', ('z',))
-    alldims += ('z',)
+    alldims_3d += ('z',)
   ypo = f.createVariable('y', 'f', ('y',))
   xpo = f.createVariable('x', 'f', ('x',))
-  alldims += ('y', 'x',)
+  alldims_2d += ('y', 'x',)
+  alldims_3d += ('y', 'x',)
 
   varout = {}
   for key, psi in var.items():
-    varout[key] = f.createVariable(key , 'f', alldims)
+    nd = psi.ndim
+    if nd > 2:
+      varout[key] = f.createVariable(key , 'f', alldims_3d)
+    else:
+      varout[key] = f.createVariable(key , 'f', alldims_2d)
 
-  if nd > 2:
+  if ndmax > 2:
     zpo[:] = np.arange(si[0])
   ypo[:] = np.arange(si[nd0])
   xpo[:] = np.arange(si[nd0+1])
