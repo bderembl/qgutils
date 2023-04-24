@@ -43,7 +43,7 @@ def comp_vel(psi, Delta, bc=None, loc='center'):
 
   psi : array [(nz,) ny,nx]
   Delta: float
-  bc: pad psi field with boundary conditions
+  bc: pad psi field with boundary conditions (default: None)
   loc: 'center' or 'faces' (default center)
 
   Returns

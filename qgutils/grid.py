@@ -176,6 +176,9 @@ def pad_bc(psi, bc='dirichlet'):
     psi[:,:,0]  = psi[:,:,-2]
     psi[:,:,-1] = psi[:,:,1]
 
+  elif (bc == None):
+    # not much to do
+    pass
   else:
     print("Boundary condition " + bc + "not implemented\n")
 
