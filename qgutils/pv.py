@@ -44,6 +44,39 @@ def gprime2N2(dh, gprime):
   return N2.squeeze((1,2))
 
 
+def N22gprime(dh, N2):
+  '''
+
+  Compute the reduced gravity g' from the Brunt Vaisala frequency squared N2
+
+
+    Parameters
+  ----------
+
+  dh : array [nz]
+  N2 : array [nz (,ny,nx)]
+
+  Returns
+  -------
+
+  gprime : array[nz (,ny,nx)]
+ 
+  '''
+
+  if np.isscalar(N2):
+    N2 = np.array([N2]).reshape(1,1)
+
+  nd = N2.ndim
+  while nd < 3:
+    N2 = N2[...,None]
+    nd = N2.ndim
+
+  dhi = 0.5*(dh[1:] + dh[:-1])
+  gprime = N2*dhi[:,None,None]
+
+  return gprime.squeeze((1,2))
+
+
 def gamma_stretch(dh, N2, f0=1.0, wmode=False, squeeze=True, mat_format='dense') :
   # sqeeze is intended as an internal option
   '''

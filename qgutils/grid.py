@@ -180,7 +180,7 @@ def pad_bc(psi, bc='dirichlet'):
     # not much to do
     pass
   else:
-    print("Boundary condition " + bc + "not implemented\n")
+    print("Boundary condition " + bc + " not implemented in pad_bc\n")
 
   if nd == 2:
     return psi.squeeze()
