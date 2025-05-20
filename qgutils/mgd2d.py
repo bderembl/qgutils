@@ -7,7 +7,6 @@ A simple 2D geometric multigrid solver for the homogeneous Dirichlet Poisson pro
 https://github.com/AbhilashReddyM/GeometricMultigrid/
 
 
-TODO: the conventions for x,y are different here. Change this to match the rest of QGutils
 """
 
 import numpy as np
@@ -23,21 +22,21 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   '''
 
   si = u.shape
-  ny = (si[-1]-2)
-  nx = (si[-2]-2)
+  nx = (si[-1]-2)
+  ny = (si[-2]-2)
 
   if f_type == 'center': # centered field
-    dy = L0/ny # L0 is the last dimension
-    dx = dy
+    dx = L0/nx # L0 is the last dimension
+    dy = dx
   else: # nodal field
-    dy = L0/(ny+1)
-    dx = dy
+    dx = L0/(nx+1)
+    dy = dx
 
   Ax = 1.0/dx**2; Ay = 1.0/dy**2
   Ap = 1.0/(2.0*(Ax+Ay))
 
   if isinstance(mask,np.ndarray):
-    mask = mask[:,1:nx+1,1:ny+1]
+    mask = mask[:,1:ny+1,1:nx+1]
 
   #Dirichlet BC
   if f_type == 'center': # centered field
@@ -54,7 +53,7 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   #if it is a pre-sweep, u is fully zero (on the finest grid depends on BC, always true on coarse grids)
   # we can save some calculation, if doing only one iteration, which is typically the case.
   if(pre and level>1):
-    u[:,1:nx+1,1:ny+1] = -Ap*f[:,1:nx+1,1:ny+1]*mask
+    u[:,1:ny+1,1:nx+1] = -Ap*f[:,1:ny+1,1:nx+1]*mask
     #Dirichlet BC
     if f_type == 'center': # centered field
       u[:, 0,:] = -u[:, 1,:]
@@ -70,9 +69,9 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
     iters = iters - 1
 
   for it in range(iters):
-    u[:,1:nx+1,1:ny+1] = Ap*(Ax*(u[:,2:nx+2,1:ny+1] + u[:,0:nx,1:ny+1])
-                         + Ay*(u[:,1:nx+1,2:ny+2] + u[:,1:nx+1,0:ny])
-                         - f[:,1:nx+1,1:ny+1])*mask
+    u[:,1:ny+1,1:nx+1] = Ap*(Ay*(u[:,2:ny+2,1:nx+1] + u[:,0:ny,1:nx+1])
+                         + Ax*(u[:,1:ny+1,2:nx+2] + u[:,1:ny+1,0:nx])
+                         - f[:,1:ny+1,1:nx+1])*mask
     #Dirichlet BC
     if f_type == 'center': # centered field
       u[:, 0,:] = -u[:, 1,:]
@@ -89,9 +88,9 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
 #    return u,None
 
   res = np.zeros_like(u)
-  res[:,1:nx+1,1:ny+1] = (f[:,1:nx+1,1:ny+1]-(( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
-                                       + Ay*(u[:,1:nx+1,2:ny+2]+u[:,1:nx+1,0:ny])
-                                       - 2.0*(Ax+Ay)*u[:,1:nx+1,1:ny+1])))*mask
+  res[:,1:ny+1,1:nx+1] = (f[:,1:ny+1,1:nx+1]-(( Ay*(u[:,2:ny+2,1:nx+1]+u[:,0:ny,1:nx+1])
+                                       + Ax*(u[:,1:ny+1,2:nx+2]+u[:,1:ny+1,0:nx])
+                                       - 2.0*(Ax+Ay)*u[:,1:ny+1,1:nx+1])))*mask
   return u,res
 
 
@@ -101,18 +100,18 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   '''
 
   si = u.shape
-  ny = (si[-1]-2)
-  nx = (si[-2]-2)
+  nx = (si[-1]-2)
+  ny = (si[-2]-2)
   nl = si[0]
 
   Sl = np.copy(Smat)
 
   if f_type == 'center': # centered field
-    dy = L0/ny 
-    dx = dy
+    dx = L0/nx 
+    dy = dx
   else: # nodal field
-    dy = L0/(ny+1)
-    dx = dy
+    dx = L0/(nx+1)
+    dy = dx
 
   Ax = 1.0/dx**2; Ay = 1.0/dy**2
   Ap = 1.0/(2.0*(Ax+Ay))
@@ -120,7 +119,7 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   Sl[1,:,:,:] -= iAp
 
   if isinstance(mask,np.ndarray):
-    mask = mask[:,1:nx+1,1:ny+1]
+    mask = mask[:,1:ny+1,1:nx+1]
   #Dirichlet BC
   if f_type == 'center': # centered field
     u[:, 0,:] = -u[:, 1,:]
@@ -136,7 +135,7 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   #if it is a pre-sweep, u is fully zero (on the finest grid depends on BC, always true on coarse grids)
   # we can save some calculation, if doing only one iteration, which is typically the case.
   if(pre and level>1):
-    u[:,1:nx+1,1:ny+1] = f[:,1:nx+1,1:ny+1]/Sl[1,:,:,:]*mask
+    u[:,1:ny+1,1:nx+1] = f[:,1:ny+1,1:nx+1]/Sl[1,:,:,:]*mask
     #Dirichlet BC
     if f_type == 'center': # centered field
       u[:, 0,:] = -u[:, 1,:]
@@ -152,11 +151,11 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
     iters=iters-1
 
   for it in range(iters):
-    rhs = f[:,1:nx+1,1:ny+1] - (Ax*(u[:,2:nx+2,1:ny+1] + u[:,0:nx,1:ny+1])
-                                + Ay*(u[:,1:nx+1,2:ny+2] + u[:,1:nx+1,0:ny]))
+    rhs = f[:,1:ny+1,1:nx+1] - (Ay*(u[:,2:ny+2,1:nx+1] + u[:,0:ny,1:nx+1])
+                                + Ax*(u[:,1:ny+1,2:nx+2] + u[:,1:ny+1,0:nx]))
 
     #replace by thomas algorithm?
-    u[:,1:nx+1,1:ny+1] = np.reshape(solve_banded((1,1), Sl[:,:,0,0], np.reshape(rhs,(nl,nx*ny))),(nl,nx,ny))*mask
+    u[:,1:ny+1,1:nx+1] = np.reshape(solve_banded((1,1), Sl[:,:,0,0], np.reshape(rhs,(nl,ny*nx))),(nl,ny,nx))*mask
 
     #Dirichlet BC
     if f_type == 'center': # centered field
@@ -174,12 +173,12 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
 #    return u,None
 
   res=np.zeros_like(u)
-  res[:,1:nx+1,1:ny+1]=(f[:,1:nx+1,1:ny+1]-( Ax*(u[:,2:nx+2,1:ny+1]+u[:,0:nx,1:ny+1])
-                                            + Ay*(u[:,1:nx+1,2:ny+2]+u[:,1:nx+1,0:ny])
-                                            - 2.0*(Ax+Ay)*u[:,1:nx+1,1:ny+1]
-                                            + Smat[1,:,:,:]*u[:,1:nx+1,1:ny+1]
-                                            + np.roll(Smat[0,:,:,:]*u[:,1:nx+1,1:ny+1],-1,axis=0)
-                                            + np.roll(Smat[2,:,:,:]*u[:,1:nx+1,1:ny+1],1,axis=0)))*mask
+  res[:,1:ny+1,1:nx+1]=(f[:,1:ny+1,1:nx+1]-( Ay*(u[:,2:ny+2,1:nx+1]+u[:,0:ny,1:nx+1])
+                                            + Ax*(u[:,1:ny+1,2:nx+2]+u[:,1:ny+1,0:nx])
+                                            - 2.0*(Ax+Ay)*u[:,1:ny+1,1:nx+1]
+                                            + Smat[1,:,:,:]*u[:,1:ny+1,1:nx+1]
+                                            + np.roll(Smat[0,:,:,:]*u[:,1:ny+1,1:nx+1],-1,axis=0)
+                                            + np.roll(Smat[2,:,:,:]*u[:,1:ny+1,1:nx+1],1,axis=0)))*mask
                                          
   return u,res
 
@@ -196,21 +195,21 @@ def restrict(v, f_type):
   nl = si[0]
 
   if f_type == 'center': # centered field
-    ny = (si[-1]-2)//2
-    nx = (si[-2]-2)//2
-    v_c = np.zeros([nl,nx+2,ny+2])
+    nx = (si[-1]-2)//2
+    ny = (si[-2]-2)//2
+    v_c = np.zeros([nl,ny+2,nx+2])
 
   #  #vectorized form of 
   #  for i in range(1,nx+1):
   #    for j in range(1,ny+1):
   #      v_c[i,j]=0.25*(v[2*i-1,2*j-1]+v[2*i,2*j-1]+v[2*i-1,2*j]+v[2*i,2*j])
   
-    v_c[:,1:nx+1,1:ny+1]=0.25*(v[:,1:2*nx:2,1:2*ny:2]+v[:,1:2*nx:2,2:2*ny+1:2]+v[:,2:2*nx+1:2,1:2*ny:2]+v[:,2:2*nx+1:2,2:2*ny+1:2])
+    v_c[:,1:ny+1,1:nx+1]=0.25*(v[:,1:2*ny:2,1:2*nx:2]+v[:,1:2*ny:2,2:2*nx+1:2]+v[:,2:2*ny+1:2,1:2*nx:2]+v[:,2:2*ny+1:2,2:2*nx+1:2])
 
   else: # nodal field
-    ny = (si[-1]-1)//2
-    nx = (si[-2]-1)//2
-    v_c = np.zeros([nl,nx+1,ny+1])
+    nx = (si[-1]-1)//2
+    ny = (si[-2]-1)//2
+    v_c = np.zeros([nl,ny+1,nx+1])
     
     v_c[:,1:-1,1:-1] = (0.25*v[:,2:-2:2,2:-2:2] +
                         0.125*(v[:,1:-3:2,2:-2:2] +
@@ -232,8 +231,8 @@ def prolong(v, f_type):
   nl = si[0]
   if f_type == 'center': # centered field
 
-    ny = (si[-1]-2)
-    nx = (si[-2]-2)
+    nx = (si[-1]-2)
+    ny = (si[-2]-2)
   
     v_f=np.zeros([nl,2*nx+2,2*ny+2])
   
@@ -247,15 +246,15 @@ def prolong(v, f_type):
   
     a=0.5625; b=0.1875; c= 0.0625
   
-    v_f[:,1:2*nx:2  ,1:2*ny:2  ] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,0:nx  ,1:ny+1]+v[:,1:nx+1,0:ny]  )+c*v[:,0:nx  ,0:ny  ]
-    v_f[:,2:2*nx+1:2,1:2*ny:2  ] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,2:nx+2,1:ny+1]+v[:,1:nx+1,0:ny]  )+c*v[:,2:nx+2,0:ny  ]
-    v_f[:,1:2*nx:2  ,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,0:nx  ,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,0:nx  ,2:ny+2]
-    v_f[:,2:2*nx+1:2,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,2:nx+2,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,2:nx+2,2:ny+2]
+    v_f[:,1:2*ny:2  ,1:2*nx:2  ] = a*v[:,1:ny+1,1:nx+1]+b*(v[:,0:ny  ,1:nx+1]+v[:,1:ny+1,0:nx]  )+c*v[:,0:ny  ,0:nx  ]
+    v_f[:,2:2*ny+1:2,1:2*nx:2  ] = a*v[:,1:ny+1,1:nx+1]+b*(v[:,2:ny+2,1:nx+1]+v[:,1:ny+1,0:nx]  )+c*v[:,2:ny+2,0:nx  ]
+    v_f[:,1:2*ny:2  ,2:2*nx+1:2] = a*v[:,1:ny+1,1:nx+1]+b*(v[:,0:ny  ,1:nx+1]+v[:,1:ny+1,2:nx+2])+c*v[:,0:ny  ,2:nx+2]
+    v_f[:,2:2*ny+1:2,2:2*nx+1:2] = a*v[:,1:ny+1,1:nx+1]+b*(v[:,2:ny+2,1:nx+1]+v[:,1:ny+1,2:nx+2])+c*v[:,2:ny+2,2:nx+2]
   else: # nodal field
-    ny = (si[-1]-1)
-    nx = (si[-2]-1)
+    nx = (si[-1]-1)
+    ny = (si[-2]-1)
   
-    v_f = np.zeros([nl,2*nx+1,2*ny+1])
+    v_f = np.zeros([nl,2*ny+1,2*nx+1])
   
     v_f[:,2:-2:2,2:-2:2] = v[:,1:-1,1:-1]
     v_f[:,1:-1:2,2:-2:2] = 0.5*(v[:,:-1,1:-1] + v[:,1:,1:-1])
