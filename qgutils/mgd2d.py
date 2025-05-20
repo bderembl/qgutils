@@ -5,6 +5,9 @@
 2017 A. R. Malipeddi
 A simple 2D geometric multigrid solver for the homogeneous Dirichlet Poisson problem on Cartesian grids and unit square. Cell centered 5-point finite difference operator.
 https://github.com/AbhilashReddyM/GeometricMultigrid/
+
+
+TODO: the conventions for x,y are different here. Change this to match the rest of QGutils
 """
 
 import numpy as np
@@ -20,12 +23,15 @@ def Jacrelax_2d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   '''
 
   si = u.shape
-  nx = ny = (si[-1]-2)
+  ny = (si[-1]-2)
+  nx = (si[-2]-2)
 
   if f_type == 'center': # centered field
-    dx = L0/nx; dy = L0/ny
+    dy = L0/ny # L0 is the last dimension
+    dx = dy
   else: # nodal field
-    dx = L0/(nx+1); dy = L0/(ny+1)
+    dy = L0/(ny+1)
+    dx = dy
 
   Ax = 1.0/dx**2; Ay = 1.0/dy**2
   Ap = 1.0/(2.0*(Ax+Ay))
@@ -95,15 +101,18 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   '''
 
   si = u.shape
-  nx = ny = (si[-1]-2)
+  ny = (si[-1]-2)
+  nx = (si[-2]-2)
   nl = si[0]
 
   Sl = np.copy(Smat)
 
   if f_type == 'center': # centered field
-    dx = L0/nx; dy = L0/ny
+    dy = L0/ny 
+    dx = dy
   else: # nodal field
-    dx = L0/(nx+1); dy = L0/(ny+1)
+    dy = L0/(ny+1)
+    dx = dy
 
   Ax = 1.0/dx**2; Ay = 1.0/dy**2
   Ap = 1.0/(2.0*(Ax+Ay))
@@ -187,8 +196,9 @@ def restrict(v, f_type):
   nl = si[0]
 
   if f_type == 'center': # centered field
-    nx = ny = (si[-1]-2)//2
-    v_c=np.zeros([nl,nx+2,ny+2])
+    ny = (si[-1]-2)//2
+    nx = (si[-2]-2)//2
+    v_c = np.zeros([nl,nx+2,ny+2])
 
   #  #vectorized form of 
   #  for i in range(1,nx+1):
@@ -198,7 +208,8 @@ def restrict(v, f_type):
     v_c[:,1:nx+1,1:ny+1]=0.25*(v[:,1:2*nx:2,1:2*ny:2]+v[:,1:2*nx:2,2:2*ny+1:2]+v[:,2:2*nx+1:2,1:2*ny:2]+v[:,2:2*nx+1:2,2:2*ny+1:2])
 
   else: # nodal field
-    nx = ny = (si[-1]-1)//2
+    ny = (si[-1]-1)//2
+    nx = (si[-2]-1)//2
     v_c = np.zeros([nl,nx+1,ny+1])
     
     v_c[:,1:-1,1:-1] = (0.25*v[:,2:-2:2,2:-2:2] +
@@ -221,7 +232,8 @@ def prolong(v, f_type):
   nl = si[0]
   if f_type == 'center': # centered field
 
-    nx = ny = (si[-1]-2)
+    ny = (si[-1]-2)
+    nx = (si[-2]-2)
   
     v_f=np.zeros([nl,2*nx+2,2*ny+2])
   
@@ -240,7 +252,8 @@ def prolong(v, f_type):
     v_f[:,1:2*nx:2  ,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,0:nx  ,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,0:nx  ,2:ny+2]
     v_f[:,2:2*nx+1:2,2:2*ny+1:2] = a*v[:,1:nx+1,1:ny+1]+b*(v[:,2:nx+2,1:ny+1]+v[:,1:nx+1,2:ny+2])+c*v[:,2:nx+2,2:ny+2]
   else: # nodal field
-    nx = ny = (si[-1]-1)
+    ny = (si[-1]-1)
+    nx = (si[-2]-1)
   
     v_f = np.zeros([nl,2*nx+1,2*ny+1])
   
@@ -419,13 +432,13 @@ def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1, mask=1):
 
   nl,ny,nx = np.shape(rhs)
   if nx % 2 == 0: # centered field
-    nlevels = np.log2(nx) + 1
-    L0 = nx*Delta
+    nlevels = np.log2(min(nx,ny)) + 1
+    L0 = nx*Delta # L0 is based on the last dimension
     rhs_p = pad_bc(rhs)
     f_type = 'center'
   else: # nodal field
-    nlevels = np.log2(nx-1)
-    L0 = (nx - 1)*Delta
+    nlevels = np.log2(min(nx,ny)-1)
+    L0 = (nx - 1)*Delta # L0 is based on the last dimension
     rhs_p = rhs
     f_type = 'node'
 
