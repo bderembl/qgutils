@@ -465,6 +465,38 @@ def FMG(num_levels,f, L0, Jacrelax, f_type, mask, Smat=1, nv=1,level=1):
 #     return xc
 
 
+def find_level(nx):
+    """
+    Determines the level of division of a number by repeatedly halving it
+    until it is no longer divisible by 2.
+
+    The function starts with an integer `nx` and finds how many times it 
+    can be divided by 2 (i.e., how many times it can be halved) until the 
+    halved value is no longer equal to half of the original value. This 
+    process is repeated until no further division by 2 is possible.
+
+    Args:
+        nx (int): The integer to be repeatedly halved.
+
+    Returns:
+        int: The level (number of times the integer can be halved by 2).
+    
+    Example:
+        >>> find_level(64)
+        6
+        
+        >>> find_level(100)
+        2
+    """
+  level = 0
+  nx2 = int(nx/2)
+  while 2*nx2 == nx:
+    level += 1
+    nx = nx2
+    nx2 = int(nx/2)
+
+  return level
+
 
 
 def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1, mask=1):
@@ -523,13 +555,16 @@ def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1, mask=1):
   #   sys.exit(1)
 
   nl,ny,nx = np.shape(rhs)
+
   if nx % 2 == 0: # centered field
-    nlevels = np.log2(min(nx,ny)) + 1
+    nlevels = min(find_level(nx), find_level(ny)) + 1
+    #int(np.log2(min(nx,ny)) + 1)
     L0 = nx*Delta # L0 is based on the last dimension
     rhs_p = pad_bc(rhs)
     f_type = 'center'
   else: # nodal field
-    nlevels = np.log2(min(nx,ny)-1)
+    nlevels = min(find_level(nx-1), find_level(ny-1)) + 1
+    #int(np.log2(min(nx,ny)-1))
     L0 = (nx - 1)*Delta # L0 is based on the last dimension
     rhs_p = rhs
     f_type = 'node'
