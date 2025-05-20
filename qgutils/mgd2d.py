@@ -183,6 +183,99 @@ def Jacrelax_3d(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
   return u,res
 
 
+
+def Jacrelax_axi(level,u,f, L0, Smat, f_type, mask, iters=1,pre=False):
+  '''
+  under-relaxed Jacobi method smoothing
+
+
+  Axi symmetric routine: this is not stictly speaking a QG routine but all the
+  machinery is here so...
+
+  '''
+
+  si = u.shape
+  nx = (si[-1]-2)
+  ny = (si[-2]-2)
+
+  if f_type == 'center': # centered field
+    dx = L0/nx # L0 is the last dimension
+    dy = dx
+  else: # nodal field
+    dx = L0/(nx+1)
+    dy = dx
+
+    xx = np.linspace(0,dx*(nx+1),nx+2)
+#    xx = xx[None,:]
+#    xr = np.zeros((1,nx+2))
+    xr = np.zeros((nx+2))
+    xr[1:] = 1./xx[1:]
+
+  Ax = 1.0/dx**2; Ay = 1.0/dy**2
+  Ap = 1.0/(2.0*(Ax+Ay))
+
+  if isinstance(mask,np.ndarray):
+    mask = mask[:,1:ny+1,1:nx+1]
+
+  #Dirichlet BC
+  if f_type == 'center': # centered field
+    u[:, 0,:] = -u[:, 1,:]
+    u[:,-1,:] = -u[:,-2,:]
+    u[:,:, 0] = -u[:,:, 1]
+    u[:,:,-1] = -u[:,:,-2]
+  else: # nodal field
+    u[:, 0,:] = 0.
+    u[:,-1,:] = 0.
+    u[:,:, 0] = 0.
+    u[:,:,-1] = 0.
+
+  #if it is a pre-sweep, u is fully zero (on the finest grid depends on BC, always true on coarse grids)
+  # we can save some calculation, if doing only one iteration, which is typically the case.
+  if(pre and level>1):
+    u[:,1:ny+1,1:nx+1] = -Ap*f[:,1:ny+1,1:nx+1]*mask
+    #Dirichlet BC
+    if f_type == 'center': # centered field
+      u[:, 0,:] = -u[:, 1,:]
+      u[:,-1,:] = -u[:,-2,:]
+      u[:,:, 0] = -u[:,:, 1]
+      u[:,:,-1] = -u[:,:,-2]
+    else:  # nodal field
+      u[:, 0,:] = 0.
+      u[:,-1,:] = 0.
+      u[:,:, 0] = 0.
+      u[:,:,-1] = 0.
+
+    iters = iters - 1
+
+  for it in range(iters):
+    u[:,1:ny+1,1:nx+1] = Ap*(Ay*(u[:,2:ny+2,1:nx+1] + u[:,0:ny,1:nx+1])
+                         + Ax*(u[:,1:ny+1,2:nx+2] + u[:,1:ny+1,0:nx])
+                         - xr[1:nx+1]/(2*dx)*(u[:,1:ny+1,2:nx+2]-u[:,1:ny+1,0:nx])
+                         - xx[1:nx+1]*f[:,1:ny+1,1:nx+1])*mask
+    #Dirichlet BC
+    if f_type == 'center': # centered field
+      u[:, 0,:] = -u[:, 1,:]
+      u[:,-1,:] = -u[:,-2,:]
+      u[:,:, 0] = -u[:,:, 1]
+      u[:,:,-1] = -u[:,:,-2]
+    else: # nodal field
+      u[:, 0,:] = 0.
+      u[:,-1,:] = 0.
+      u[:,:, 0] = 0.
+      u[:,:,-1] = 0.
+
+#  if(not pre):
+#    return u,None
+
+  res = np.zeros_like(u)
+  res[:,1:ny+1,1:nx+1] = (f[:,1:ny+1,1:nx+1]-(xr[1:nx+1]*( Ay*(u[:,2:ny+2,1:nx+1]+u[:,0:ny,1:nx+1])
+                                       + Ax*(u[:,1:ny+1,2:nx+2]+u[:,1:ny+1,0:nx])
+                                       - 2.0*(Ax+Ay)*u[:,1:ny+1,1:nx+1]) 
+                                        - xr[1:nx+1]/(2*dx)*(u[:,1:ny+1,2:nx+2]-u[:,1:ny+1,0:nx])))*mask
+  return u,res
+
+
+
 def restrict(v, f_type):
   '''
   restrict 'v' to the coarser grid
@@ -456,7 +549,9 @@ def solve_mg(rhs, Delta, select_solver='2d', dh=1, N2=1 ,f0=1, mask=1):
   elif select_solver == 'w':
     S = gamma_stretch(dh, N2, f0, wmode=True, squeeze=False, mat_format='diag')
     u,res = FMG(nlevels, rhs_p, L0, Jacrelax_3d, f_type, mask, S, nv)
-
+  elif select_solver == 'axi':
+    S = 1
+    u,res = FMG(nlevels, rhs_p, L0, Jacrelax_axi, f_type, mask, S, nv)
 
   if f_type == 'center': # centered field
     u = u[:,1:-1,1:-1]
