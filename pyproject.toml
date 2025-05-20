@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qgutils"
+version = "0.6"
+dependencies = ['numpy', 'scipy' ]
+authors = [
+  {name = "Bruno Deremble", email = "bruno.deremble@cnrs.fr"}
+]
